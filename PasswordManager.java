@@ -3,39 +3,39 @@ import java.util.*;
 
 public class PasswordManager implements Serializable {
     private static final long serialVersionUID = 1L;
-
-    // username -> list of entries
-    private Map<String, List<PasswordEntry>> userEntries;
-
+    private Map<String, List<PasswordEntry>> entriesByVault = new HashMap<>();
     private static final String FILE_NAME = "passwords.dat";
 
-    public PasswordManager() {
-        userEntries = new HashMap<>();
+    private String key(String username, String accountType) {
+        return username.trim() + "|" + accountType.trim();
     }
 
-    public List<PasswordEntry> getEntriesForUser(String username) {
-        return userEntries.computeIfAbsent(username, k -> new ArrayList<>());
+    public List<PasswordEntry> getEntriesForUser(String username, String accountType) {
+        return entriesByVault.computeIfAbsent(key(username, accountType), k -> new ArrayList<>());
     }
 
-    public void addEntry(String username, PasswordEntry entry) {
-        getEntriesForUser(username).add(entry);
+    public void addEntry(String username, String accountType, PasswordEntry entry) {
+        getEntriesForUser(username, accountType).add(entry);
         saveToFile();
     }
 
-    public void removeEntry(String username, int index) {
-        List<PasswordEntry> entries = userEntries.get(username);
-        if (entries != null && index >= 0 && index < entries.size()) {
-            entries.remove(index);
+    public void removeEntry(String username, String accountType, int index) {
+        List<PasswordEntry> list = getEntriesForUser(username, accountType);
+        if (index >= 0 && index < list.size()) {
+            list.remove(index);
             saveToFile();
         }
     }
 
+    public void deleteUser(String username) {
+        String prefix = username.trim() + "|";
+        entriesByVault.keySet().removeIf(k -> k.startsWith(prefix));
+        saveToFile();
+    }
+
     public void saveToFile() {
-        try (ObjectOutputStream oos =
-                     new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
-
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
             oos.writeObject(this);
-
         } catch (IOException e) {
             System.out.println("Error saving password data: " + e.getMessage());
         }
@@ -43,24 +43,13 @@ public class PasswordManager implements Serializable {
 
     public static PasswordManager loadFromFile() {
         File file = new File(FILE_NAME);
-
-        if (!file.exists()) {
-            return new PasswordManager();
-        }
-
-        try (ObjectInputStream ois =
-                     new ObjectInputStream(new FileInputStream(FILE_NAME))) {
-
+        if (!file.exists()) return new PasswordManager();
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE_NAME))) {
             Object obj = ois.readObject();
-
-            if (obj instanceof PasswordManager) {
-                return (PasswordManager) obj;
-            }
-
+            if (obj instanceof PasswordManager) return (PasswordManager) obj;
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("Error loading password data: " + e.getMessage());
         }
-
         return new PasswordManager();
     }
 }
