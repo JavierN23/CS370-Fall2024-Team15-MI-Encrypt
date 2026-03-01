@@ -1,20 +1,21 @@
-import javax.swing.*;
 import java.awt.event.*;
+import javax.swing.*;
 
 public class ChoicePage implements ActionListener {
 
     private JFrame frame;
     private JButton businessButton, personalButton;
-
+    private PasswordManager pm;
     private Credentials creds;
     private String username;
 
-    public ChoicePage(Credentials creds, String username) {
+    public ChoicePage(Credentials creds, PasswordManager pm, String username) {
         this.creds = creds;
         this.username = username;
+        this.pm = pm;
 
         frame = new JFrame ("Choose Account Type");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setSize(400, 300);
         frame.setLayout(null);
 
@@ -39,11 +40,11 @@ public class ChoicePage implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         if  (e.getSource() == businessButton) {
             frame.dispose();
-            SwingUtilities.invokeLater(() -> new BusinessAccountPage(creds, username));
+            SwingUtilities.invokeLater(() -> new BusinessAccountPage(creds, pm, username));
         } 
         if (e.getSource() == personalButton) {
             frame.dispose();
-            SwingUtilities.invokeLater(() -> new PersonalAccountPage(creds, username));
+            SwingUtilities.invokeLater(() -> new PersonalAccountPage(creds, pm, username));
         }
     }
 }

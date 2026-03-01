@@ -15,22 +15,19 @@ public class PasswordEntry implements Serializable {
 
     }
 
-    public String getSite() { 
+    public String getSite(){
         return site;
     }
-    
     public String getUsername() {
         return username;
-    }
-
+    }    
     public String getPassword() {
         return password;
     }
-    
-    @Override
 
+    @Override
     public String toString() {
-        return "Site: " + site + ", Username: " + username + ", Password: " + password;
+        return site + " | " + username;
     }
 
 }
