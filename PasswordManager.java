@@ -14,11 +14,13 @@ public class PasswordManager implements Serializable {
         return entriesByVault.computeIfAbsent(key(username, accountType), k -> new ArrayList<>());
     }
 
+    // AddEntry
     public void addEntry(String username, String accountType, PasswordEntry entry) {
         getEntriesForUser(username, accountType).add(entry);
         saveToFile();
     }
 
+    // RemoveEntry
     public void removeEntry(String username, String accountType, int index) {
         List<PasswordEntry> list = getEntriesForUser(username, accountType);
         if (index >= 0 && index < list.size()) {
@@ -27,12 +29,14 @@ public class PasswordManager implements Serializable {
         }
     }
 
+    // Delete all entries for a user (when account is deleted)
     public void deleteUser(String username) {
         String prefix = username.trim() + "|";
         entriesByVault.keySet().removeIf(k -> k.startsWith(prefix));
         saveToFile();
     }
 
+    // Save to file
     public void saveToFile() {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
             oos.writeObject(this);
@@ -41,6 +45,7 @@ public class PasswordManager implements Serializable {
         }
     }
 
+    // Load from file
     public static PasswordManager loadFromFile() {
         File file = new File(FILE_NAME);
         if (!file.exists()) return new PasswordManager();

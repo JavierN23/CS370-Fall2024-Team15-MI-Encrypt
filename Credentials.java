@@ -16,7 +16,7 @@ public class Credentials implements Serializable {
         }
         loginPageInfo.put(username, password);
         saveToFile();
-        return true;
+        return true; // Account created
     }
 
     public boolean login(String username, String password) {
@@ -39,6 +39,7 @@ public class Credentials implements Serializable {
         return false; // Not found
     }
 
+    // Save credentials to file
     public void saveToFile() {
         try (ObjectOutputStream oos =
                      new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
@@ -48,6 +49,7 @@ public class Credentials implements Serializable {
         }
     }
 
+    // Load credentials from file
     public static Credentials loadFromFile() {
         File file = new File(FILE_NAME);
         if (!file.exists()) return new Credentials();

@@ -16,10 +16,12 @@ public class ChoicePanel extends JPanel {
         card.add(UI.subtle("Choose where you want to manage entries:"));
         UI.space(card, 18);
 
+        // Action buttons
         JButton personal = new JButton("Personal Vault");
         JButton business = new JButton("Business Vault");
         JButton logout = new JButton("Logout");
 
+        // Center align buttons
         personal.setAlignmentX(Component.CENTER_ALIGNMENT);
         business.setAlignmentX(Component.CENTER_ALIGNMENT);
         logout.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -37,6 +39,7 @@ public class ChoicePanel extends JPanel {
         setLayout(new BorderLayout());
         add(page, BorderLayout.CENTER);
 
+        // When I click the buttons, I want to go to the Specific account or back to login
         personal.addActionListener(e -> app.showVault("Personal"));
         business.addActionListener(e -> app.showVault("Business"));
         logout.addActionListener(e -> app.showLogin());
