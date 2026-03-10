@@ -1,269 +1,58 @@
-
-import java.io.*;
-import java.util.*;
-
-public class Main {
-
-   //Files
-    private static final String ACCOUNTS_FILE = "accounts";
-    private static final String PASSWORDS_FILE = "passwords.";
-
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-
-        System.out.println("==================================");
-        System.out.println("   Welcome to MI Encrypt");
-        System.out.println("==================================");
-
-        while (true) {
-            System.out.println(" ");
-            System.out.println("1) Login");
-            System.out.println("2) Create Account");
-            System.out.println("3) Exit");
-            System.out.print("Choose an option: ");
-            String choice = sc.nextLine().trim();
-
-            if (choice.equals("1")) {
-                String loggedInUser = login(sc);
-                if (loggedInUser != null) {
-                    menuLoop(sc, loggedInUser);
-                }
-            } else if (choice.equals("2")) {
-                createAccount(sc);
-            } else if (choice.equals("3")) {
-                System.out.println("Goodbye!");
-                break;
-            } else {
-                System.out.println("Invalid choice. Try again.");
-            }
-        }
-
-        sc.close();
-    }
-
-    //creat Account
-
-    private static void createAccount(Scanner sc) {
-        System.out.println("\n--- Create Account ---");
-        String type = " ";
-
-        while (true) {
-            System.out.println("Choose account type:");
-            System.out.println("1) Personal");
-            System.out.println("2) Business");
-            System.out.print("Your choice: ");
-            String choice = sc.nextLine().trim();
-            if (choice.equals("1")) {
-                type = "Personal";
-                break;
-            }
-            if (choice.equals("2")) {
-                type = "Business";
-                break;
-            }
-            System.out.println("Invalid choice. Try again.");
-        }
-
-        String username = " ";
-        while (true) {
-            System.out.print("Create a username: ");
-            username = sc.nextLine().trim();
-            if (username.isEmpty()) {
-                System.out.println("Username cannot be empty.");
-                continue;
-            }
-            if (accountExists(username)) {
-                System.out.println("That username already exists. Try another.");
-                continue;
-            }
-            break;
-        }
-
-        System.out.print("Create a password: ");
-        String password = sc.nextLine();
-
-
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(ACCOUNTS_FILE, true))) {
-            bw.write(username + "|" + password + "|" + type);
-            bw.newLine();
-            System.out.println("Account created! You can now log in.");
-        } catch (IOException error) {
-            System.out.println("Error saving account: " + error.getMessage());
-        }
-    }
-
-    private static String login(Scanner sc) {
-        System.out.println("\n--- Login ---");
-        System.out.print("Username: ");
-        String username = sc.nextLine().trim();
-        System.out.print("Password: ");
-        String password = sc.nextLine().trim();
-
-
-        try (BufferedReader br = new BufferedReader(new FileReader(ACCOUNTS_FILE))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split("\\|", -1);
-                if (parts.length >= 2) {
-                    String u = parts[0];
-                    String p = parts[1];
-                    if (u.equals(username) && p.equals(password)) {
-                        System.out.println("Login successful. Welcome, " + username + "!");
-                        return username;
-                    }
-                }
-            }
-            System.out.println("Login failed. Wrong username or password.");
-        } catch (FileNotFoundException error) {
-            System.out.println("No accounts found yet. Create an account first.");
-        } catch (IOException error) {
-            System.out.println("Error reading accounts: " + error.getMessage());
-        }
-
-        return null;
-    }
-
-    private static boolean accountExists(String username) {
-        try (BufferedReader br = new BufferedReader(new FileReader(ACCOUNTS_FILE))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split("\\|", -1);
-                if (parts.length >= 1 && parts[0].equals(username)) {
-                    return true;
-                }
-            }
-        } catch (IOException ignored) {
-
-        }
-        return false;
-    }
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.spec.IvParameterSpec;
+import java.security.SecureRandom;
+import java.util.Base64;
 
 
 
-    private static void menuLoop(Scanner sc, String loggedInUser) {
-        while (true) {
-            System.out.println("\n--- MI Encrypt Menu ---");
-            System.out.println("1) Add password");
-            System.out.println("2) Delete password");
-            System.out.println("3) View passwords");
-            System.out.println("4) Logout");
-            System.out.print("Choose an option: ");
-            String choice = sc.nextLine().trim();
 
-            if (choice.equals("1")) {
-                addPassword(sc, loggedInUser);
-            } else if (choice.equals("2")) {
-                deletePassword(sc, loggedInUser);
-            } else if (choice.equals("3")) {
-                viewPasswords(loggedInUser);
-            } else if (choice.equals("4")) {
-                System.out.println("Logged out.");
-                break;
-            } else {
-                System.out.println("Invalid choice. Try again.");
-            }
+private static final SecretKeySpec KEY =
+            new SecretKeySpec("1234567890123456".getBytes(), "AES");
+
+    public static String encryptCTR(String text) {
+        try {
+            byte[] nonce = new byte[8];
+            new SecureRandom().nextBytes(nonce);
+
+            byte[] iv = new byte[16];
+            System.arraycopy(nonce, 0, iv, 0, 8);
+
+            Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, KEY, new IvParameterSpec(iv));
+
+            byte[] encrypted = cipher.doFinal(text.getBytes());
+
+            byte[] output = new byte[8 + encrypted.length];
+            System.arraycopy(nonce, 0, output, 0, 8);
+            System.arraycopy(encrypted, 0, output, 8, encrypted.length);
+
+            return Base64.getEncoder().encodeToString(output);
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
 
-    private static void addPassword(Scanner sc, String accName) {
-        System.out.println("\n--- Add Password ---");
-        System.out.print("Category: ");
-        String category = sc.nextLine().trim();
-        System.out.print("Username for that account: ");
-        String acctUser = sc.nextLine().trim();
-        System.out.print("Password for that account: ");
-        String acctPass = sc.nextLine().trim();
+    public static String decryptCTR(String text) {
+        try {
+            byte[] input = Base64.getDecoder().decode(text);
 
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(PASSWORDS_FILE, true))) {
-            bw.write(accName + "|" + category + "|" + acctUser + "|" + acctPass);
-            bw.newLine();
-            System.out.println("Saved!");
-        } catch (IOException error) {
-            System.out.println("Error saving password: " + error.getMessage());
+            byte[] nonce = new byte[8];
+            System.arraycopy(input, 0, nonce, 0, 8);
+
+            byte[] ciphertext = new byte[input.length - 8];
+            System.arraycopy(input, 8, ciphertext, 0, ciphertext.length);
+
+            byte[] iv = new byte[16];
+            System.arraycopy(nonce, 0, iv, 0, 8);
+
+            Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, KEY, new IvParameterSpec(iv));
+
+            return new String(cipher.doFinal(ciphertext));
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-    }
-
-    private static void viewPasswords(String accName) {
-        System.out.println("\n--- Your Saved Passwords ---");
-        boolean foundAny = false;
-
-        try (BufferedReader br = new BufferedReader(new FileReader(PASSWORDS_FILE))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split("\\|", -1);
-                if (parts.length == 4 && parts[0].equals(accName)) {
-                    foundAny = true;
-                    String category = parts[1];
-                    String acctUser = parts[2];
-                    String acctPass = parts[3];
-                    System.out.println("Category: " + category + " | Username: " + acctUser + " | Password: " + acctPass);
-                }
-            }
-        } catch (FileNotFoundException error) {
-            System.out.println("No passwords saved yet.");
-            return;
-        } catch (IOException error) {
-            System.out.println("Error reading passwords: " + error.getMessage());
-            return;
-        }
-
-        if (!foundAny) {
-            System.out.println("No passwords saved yet.");
-        }
-    }
-
-    private static void deletePassword(Scanner sc, String accName) {
-        System.out.println("\n--- Delete Password ---");
-        System.out.print("Enter the category to delete: ");
-        String categoryToDelete = sc.nextLine().trim();
-        System.out.print("Enter the username for that category: ");
-        String acctUserToDelete = sc.nextLine().trim();
-
-        File file = new File(PASSWORDS_FILE);
-        if (!file.exists()) {
-            System.out.println("No passwords file found yet.");
-            return;
-        }
-
-        List<String> keptLines = new ArrayList<>();
-        boolean deleted = false;
-
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split("\\|", -1);
-
-
-                if (parts.length == 4
-                        && parts[0].equals(accName)
-                        && parts[1].equalsIgnoreCase(categoryToDelete)
-                        && parts[2].equals(acctUserToDelete)) {
-                    deleted = true;
-                } else {
-                    keptLines.add(line);
-                }
-            }
-        } catch (IOException error) {
-            System.out.println("Error reading passwords: " + error.getMessage());
-            return;
-        }
-
-
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(file, false))) {
-            for (String l : keptLines) {
-                bw.write(l);
-                bw.newLine();
-            }
-        } catch (IOException error) {
-            System.out.println("Error writing passwords: " + error.getMessage());
-            return;
-        }
-
-        if (deleted) {
-            System.out.println("Deleted!");
-        } else {
-            System.out.println("No matching entry found to delete.");
-        }
-    }
-}
