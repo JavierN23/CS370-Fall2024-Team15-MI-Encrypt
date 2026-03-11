@@ -22,13 +22,20 @@ public class VaultPanel extends JPanel {
     private final DefaultListModel<PasswordEntry> model = new DefaultListModel<>();
     private final JList<PasswordEntry> list = new JList<>(model);
 
+    // Scaling
+    private final Dimension baseSize = new Dimension(1000, 700);
+    private float lastScale = 1.0f;
+
+    private final EntryRenderer renderer = new EntryRenderer();
+
     public VaultPanel(AppFrame app, PasswordManager pm) {
         this.app = app;
         this.pm = pm;
 
-        JPanel page = UI.page();
+        // Use BorderLayout page so CENTER grows when maximized
+        JPanel page = UI.pageBorder();
 
-        // Top bar: title + search + nav buttons
+        // Top bar: title + search + nav buttons 
         JPanel top = new JPanel(new BorderLayout(12, 0));
         top.setOpaque(false);
 
@@ -36,8 +43,7 @@ public class VaultPanel extends JPanel {
         left.setOpaque(false);
         left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
 
-        // Title 
-
+        // Title
         title.setFont(title.getFont().deriveFont(Font.BOLD, 32f));
         title.setForeground(UI.TEXT);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -72,13 +78,13 @@ public class VaultPanel extends JPanel {
         top.add(left, BorderLayout.CENTER);
         top.add(right, BorderLayout.EAST);
 
-        // Center card: entry list
+        // Center card
         JPanel card = UI.card();
         card.setLayout(new BorderLayout(10, 10));
 
         list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         list.setFixedCellHeight(56);
-        list.setCellRenderer(new EntryRenderer());
+        list.setCellRenderer(renderer);
         list.setBackground(UI.CARD);
         list.setForeground(UI.TEXT);
         list.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
@@ -93,27 +99,27 @@ public class VaultPanel extends JPanel {
         card.add(scroll, BorderLayout.CENTER);
 
         // Bottom actions
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         buttons.setOpaque(false);
 
         JButton add = UI.accentButton("Add");
         JButton view = UI.secondaryButton("View");
+        JButton edit = UI.secondaryButton("Edit");
         JButton del = UI.deleteButton("Delete");
         JButton copyUser = UI.secondaryButton("Copy Username");
         JButton copyPass = UI.secondaryButton("Copy Password");
 
         buttons.add(add);
         buttons.add(view);
+        buttons.add(edit);
         buttons.add(del);
         buttons.add(copyUser);
         buttons.add(copyPass);
 
-        // Layout: top, card, bottom
-        page.add(top);
-        UI.space(page, 12);
-        page.add(card);
-        UI.space(page, 12);
-        page.add(buttons);
+        // Layout placement
+        page.add(top, BorderLayout.NORTH);
+        page.add(card, BorderLayout.CENTER);
+        page.add(buttons, BorderLayout.SOUTH);
 
         setLayout(new BorderLayout());
         add(page, BorderLayout.CENTER);
@@ -122,9 +128,16 @@ public class VaultPanel extends JPanel {
         back.addActionListener(e -> app.showChoice());
         logout.addActionListener(e -> app.showLogin());
 
-        add.addActionListener(e -> addEntry());
+        add.addActionListener(e -> {
+            addEntry();
+            pm.saveToFile();
+        });
         view.addActionListener(e -> viewEntry());
-        del.addActionListener(e -> deleteEntry());
+        edit.addActionListener(e -> editEntry()); // editEntry saves
+        del.addActionListener(e -> {
+            deleteEntry();
+            // deleteEntry saves if it deletes
+        });
 
         copyUser.addActionListener(e -> copySelectedUsername());
         copyPass.addActionListener(e -> copySelectedPassword());
@@ -142,9 +155,34 @@ public class VaultPanel extends JPanel {
             @Override public void removeUpdate(DocumentEvent e) { refresh(); }
             @Override public void changedUpdate(DocumentEvent e) { refresh(); }
         });
+
+        // Resize -> scale UI 
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                int w = Math.max(getWidth(), 1);
+                int h = Math.max(getHeight(), 1);
+
+                float sx = w / (float) baseSize.width;
+                float sy = h / (float) baseSize.height;
+
+                float scale = Math.min(sx, sy);
+                scale = Math.max(0.70f, Math.min(1.40f, scale));
+
+                applyScale(scale);
+            }
+        });
+
+        SwingUtilities.invokeLater(() -> {
+            int w = getWidth() > 0 ? getWidth() : baseSize.width;
+            int h = getHeight() > 0 ? getHeight() : baseSize.height;
+            float s = Math.min(w / (float) baseSize.width, h / (float) baseSize.height);
+            s = Math.max(0.70f, Math.min(1.40f, s));
+            applyScale(s);
+        });
     }
 
-    // Load the specific account 
+    // Load the specific account
     public void load(String username, String accountType) {
         this.user = username;
         this.type = accountType;
@@ -154,7 +192,6 @@ public class VaultPanel extends JPanel {
         refresh();
     }
 
-    // Refresh the list
     private void refresh() {
         model.clear();
 
@@ -169,7 +206,23 @@ public class VaultPanel extends JPanel {
         }
     }
 
-    // Add new entry 
+    // Apply scale to key UI elements
+    public void applyScale(float scale) {
+        if (Math.abs(scale - lastScale) < 0.03f) return;
+        lastScale = scale;
+
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 32f * scale));
+        searchField.setPreferredSize(new Dimension((int)(260 * scale), (int)(34 * scale)));
+        list.setFixedCellHeight((int)(56 * scale));
+
+        renderer.setScale(scale);
+        list.setCellRenderer(renderer);
+
+        revalidate();
+        repaint();
+    }
+
+    // Add new entry
     private void addEntry() {
         JTextField site = new JTextField();
         JTextField u = new JTextField();
@@ -236,7 +289,55 @@ public class VaultPanel extends JPanel {
         JOptionPane.showMessageDialog(this, panel, "Entry", JOptionPane.PLAIN_MESSAGE);
     }
 
-    // Deletes the selected entry after confirmation
+    // Edit selected entry
+    private void editEntry() {
+        PasswordEntry sel = list.getSelectedValue();
+        if (sel == null) {
+            JOptionPane.showMessageDialog(this, "Select an entry.");
+            return;
+        }
+
+        JTextField site = new JTextField(sel.getSite());
+        JTextField u = new JTextField(sel.getUsername());
+        JPasswordField p = new JPasswordField(); // blank = keep current password
+
+        UI.styleInput(site);
+        UI.styleInput(u);
+        UI.styleInput(p);
+
+        Object[] msg = {"Site:", site, "Username:", u, "New Password (leave blank to keep current):", p};
+        int ok = JOptionPane.showConfirmDialog(this, msg, "Edit Entry", JOptionPane.OK_CANCEL_OPTION);
+        if (ok != JOptionPane.OK_OPTION) return;
+
+        String s = site.getText().trim();
+        String un = u.getText().trim();
+        String pw = new String(p.getPassword()).trim();
+
+        if (s.isEmpty() || un.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Site and Username are required.");
+            return;
+        }
+
+        List<PasswordEntry> full = pm.getEntriesForUser(user, type);
+        int realIndex = full.indexOf(sel);
+
+        if (realIndex < 0) {
+            JOptionPane.showMessageDialog(this, "Error updating entry.");
+            return;
+        }
+
+        PasswordEntry target = full.get(realIndex);
+        target.setSite(s);
+        target.setUsername(un);
+
+        if (!pw.isEmpty()) target.setPassword(pw);
+
+        pm.saveToFile();
+        refresh();
+        JOptionPane.showMessageDialog(this, "Entry updated.");
+    }
+
+    // Delete selected entry
     private void deleteEntry() {
         PasswordEntry sel = list.getSelectedValue();
         if (sel == null) {
@@ -247,12 +348,12 @@ public class VaultPanel extends JPanel {
         int ok = JOptionPane.showConfirmDialog(this, "Delete this entry?", "Confirm", JOptionPane.YES_NO_OPTION);
         if (ok != JOptionPane.YES_OPTION) return;
 
-        // If filtered, find it in the full list first
         List<PasswordEntry> full = pm.getEntriesForUser(user, type);
         int realIndex = full.indexOf(sel);
 
         if (realIndex >= 0) {
             pm.removeEntry(user, type, realIndex);
+            pm.saveToFile();
             refresh();
         }
     }
@@ -286,7 +387,6 @@ public class VaultPanel extends JPanel {
                 .setContents(new StringSelection(text), null);
     }
 
-
     // Mask a password
     private String mask(String s) {
         if (s == null) return "";
@@ -294,7 +394,6 @@ public class VaultPanel extends JPanel {
         return "•".repeat(n);
     }
 
-    // password entry renderer for JList
     private static class EntryRenderer extends JPanel implements ListCellRenderer<PasswordEntry> {
         private final JLabel site = new JLabel();
         private final JLabel user = new JLabel();
@@ -315,6 +414,14 @@ public class VaultPanel extends JPanel {
             add(user);
         }
 
+        void setScale(float scale) {
+            site.setFont(site.getFont().deriveFont(Font.BOLD, 14f * scale));
+            user.setFont(user.getFont().deriveFont(Font.PLAIN, 12f * scale));
+            int top = Math.max(4, (int)(10 * scale));
+            int left = Math.max(6, (int)(12 * scale));
+            setBorder(BorderFactory.createEmptyBorder(top, left, top, left));
+        }
+
         @Override
         public Component getListCellRendererComponent(
                 JList<? extends PasswordEntry> list,
@@ -325,8 +432,6 @@ public class VaultPanel extends JPanel {
         ) {
             site.setText(value.getSite());
             user.setText(value.getUsername());
-
-            // Selection highlight
             setBackground(isSelected ? new Color(60, 90, 130) : UI.CARD);
             return this;
         }

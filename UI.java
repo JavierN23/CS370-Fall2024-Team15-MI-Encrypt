@@ -38,8 +38,14 @@ public class UI {
         c.setBackground(CARD);
 
         c.setPreferredSize(new Dimension(420, 320));
-        c.setMaximumSize(new Dimension(520, 1000));
         return c;
+    }
+
+    public static JPanel pageBorder() {
+        JPanel p = new JPanel(new BorderLayout(12, 12));
+        p.setBorder(new EmptyBorder(10, 10, 10, 10));
+        p.setBackground(BG);
+        return p;
     }
 
     public static JLabel h1(String text) {
@@ -78,6 +84,9 @@ public class UI {
         f.setBackground(new Color(34, 34, 40));
         f.setForeground(TEXT);
         f.setCaretColor(TEXT);
+
+        f.setFont(f.getFont().deriveFont(14f));
+
         f.setBorder(new CompoundBorder(
             new LineBorder(BORDER, 1, true),
             new EmptyBorder(8, 12, 8, 12)));

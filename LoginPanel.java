@@ -6,7 +6,6 @@ public class LoginPanel extends JPanel {
     private final AppFrame app;
     private final Credentials creds;
 
-    // Input fields
     private final JTextField user = new JTextField(18);
     private final JPasswordField pass = new JPasswordField(18);
 
@@ -14,7 +13,6 @@ public class LoginPanel extends JPanel {
         this.app = app;
         this.creds = creds;
 
-        // Style inputs
         UI.styleInput(user);
         UI.styleInput(pass);
 
@@ -30,7 +28,6 @@ public class LoginPanel extends JPanel {
 
         card.add(Box.createVerticalGlue());
 
-        // Login form
         JLabel title = UI.h1("Login");
         card.add(title);
 
@@ -42,15 +39,12 @@ public class LoginPanel extends JPanel {
 
         UI.space(card, 24);
 
-        // Username Field
         card.add(UI.row(UI.label("Username"), user));
-        UI.space(card, 14);
+        UI.space(card, 15);
 
-        // Password Field
         card.add(UI.row(UI.label("Password"), pass));
         UI.space(card, 10);
 
-        // Show password checkbox
         JCheckBox showPass = new JCheckBox("Show Password");
         showPass.setOpaque(false);
         showPass.setForeground(UI.MUTED);
@@ -63,7 +57,6 @@ public class LoginPanel extends JPanel {
         card.add(showPass);
         UI.space(card, 16);
 
-        // Action buttons
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         buttons.setOpaque(false);
 
@@ -92,7 +85,6 @@ public class LoginPanel extends JPanel {
         logo.setHorizontalAlignment(SwingConstants.CENTER);
         logoPanel.add(logo, BorderLayout.CENTER);
 
-        // Two column layout
         twoCol.add(card);
         twoCol.add(logoPanel);
 
@@ -107,10 +99,8 @@ public class LoginPanel extends JPanel {
         signup.addActionListener(e -> doSignup());
         reset.addActionListener(e -> clear());
 
-        // Pressing Enter in password field triggers login
         pass.addActionListener(e -> doLogin());
 
-        // Set login button as default when this panel is shown
         SwingUtilities.invokeLater(() -> {
             JRootPane rp = SwingUtilities.getRootPane(LoginPanel.this);
             if (rp != null) rp.setDefaultButton(login);
@@ -135,7 +125,6 @@ public class LoginPanel extends JPanel {
         return new ImageIcon(scaled);
     }
 
-    // If it can't load the image, it will load "MI Encrypt" text as a fallback logo
     private Icon fallbackToIcon(JLabel label, int w, int h) {
         label.setSize(w, h);
         Image img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
@@ -145,13 +134,11 @@ public class LoginPanel extends JPanel {
         return new ImageIcon(img);
     }
 
-    // Clears the input fields
     public void clear() {
         user.setText("");
         pass.setText("");
     }
 
-    // Handles the login logic
     private void doLogin() {
         String u = user.getText().trim();
         String p = new String(pass.getPassword()).trim();
@@ -170,7 +157,6 @@ public class LoginPanel extends JPanel {
         }
     }
 
-    // Handles new account creation
     private void doSignup() {
         String u = user.getText().trim();
         String p = new String(pass.getPassword()).trim();

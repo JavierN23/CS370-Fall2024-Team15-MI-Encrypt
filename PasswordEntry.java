@@ -6,12 +6,12 @@ public class PasswordEntry implements Serializable {
     
     private String site;
     private String username;
-    private String password;
+    private String encryptedPassword;
 
-    public PasswordEntry(String site, String Username, String Password) {
+    public PasswordEntry(String site, String Username, String plainPassword) {
         this.site = site;
         this.username = Username;
-        this.password = Password;
+        this.encryptedPassword = EncryptionService.encryptCTR(plainPassword);
 
     }
 
@@ -22,7 +22,23 @@ public class PasswordEntry implements Serializable {
         return username;
     }    
     public String getPassword() {
-        return password;
+        return EncryptionService.decryptCTR(encryptedPassword);
+    }
+
+    public String getEncyptedPassword() {
+        return encryptedPassword;
+    }
+
+    public void setSite(String site) {
+        this.site = site;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setPassword(String plainPassword) {
+        this.encryptedPassword = EncryptionService.encryptCTR(plainPassword);
     }
 
     @Override
