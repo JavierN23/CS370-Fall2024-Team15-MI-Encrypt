@@ -52,7 +52,10 @@ public class Credentials implements Serializable {
     // Load credentials from file
     public static Credentials loadFromFile() {
         File file = new File(FILE_NAME);
-        if (!file.exists()) return new Credentials();
+        if (!file.exists() || file.length() == 0) {
+            return new Credentials();
+        }
+            
 
         try (ObjectInputStream ois =
                      new ObjectInputStream(new FileInputStream(FILE_NAME))) {

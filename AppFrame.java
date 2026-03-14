@@ -45,21 +45,17 @@ public class AppFrame extends JFrame {
     }
 
     private void setAppIcon() {
-        String[] candidates = {
-            "src/MI_Encrypt.png",
-            "src/resources/MI_Encrypt.png",
-            "/home/javi/VS Code/MI Encrypt/MI Encrypt/src/MI_Encrypt.png"
-        };
+        java.net.URL iconUrl = AppFrame.class.getResource("/MI_Encrypt.png");
 
-        for (String path : candidates) {
-            ImageIcon icon = new ImageIcon(path);
-            if (icon.getIconWidth() > 0) {
-                setIconImage(icon.getImage());
-                System.out.println("App icon loaded from: " + path);
-                return;
-            }
+        System.out.println("iconUrl = " + iconUrl);
+
+        if (iconUrl != null) {
+            ImageIcon icon = new ImageIcon(iconUrl);
+            setIconImage(icon.getImage());
+            System.out.println("App icon loaded from resources");
+        } else {
+            System.out.println("Not Found");
         }
-        System.out.println("Not Found");
     }
     public void setCurrentUser(String username) {
         this.currentUser = username;

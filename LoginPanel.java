@@ -79,8 +79,8 @@ public class LoginPanel extends JPanel {
                 BorderFactory.createEmptyBorder(0, 24, 0, 24)
         ));
 
-        JLabel logo = new JLabel(loadLogoFile(
-                "/home/javi/VS Code/MI Encrypt/MI Encrypt/src/MI_Encrypt.png", 420
+        JLabel logo = new JLabel(loadLogoResource(
+                "/MI_Encrypt.png", 420
         ));
         logo.setHorizontalAlignment(SwingConstants.CENTER);
         logoPanel.add(logo, BorderLayout.CENTER);
@@ -106,6 +106,25 @@ public class LoginPanel extends JPanel {
             if (rp != null) rp.setDefaultButton(login);
         });
     }
+
+    private Icon loadLogoResource(String resourcePath, int targetWidth) {
+    java.net.URL url = getClass().getResource(resourcePath);
+
+    if (url == null) {
+        JLabel fallback = new JLabel("MI Encrypt");
+        fallback.setForeground(UI.MUTED);
+        fallback.setFont(fallback.getFont().deriveFont(Font.BOLD, 32f));
+        return fallbackToIcon(fallback, targetWidth, 200);
+    }
+
+    ImageIcon icon = new ImageIcon(url);
+    int w = icon.getIconWidth();
+    int h = icon.getIconHeight();
+    int targetHeight = (int) Math.round((double) targetWidth * h / w);
+
+    Image scaled = icon.getImage().getScaledInstance(targetWidth, targetHeight, Image.SCALE_SMOOTH);
+    return new ImageIcon(scaled);
+}
 
     private Icon loadLogoFile(String path, int targetWidth) {
         ImageIcon icon = new ImageIcon(path);
