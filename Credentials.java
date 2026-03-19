@@ -4,17 +4,20 @@ import java.util.HashMap;
 public class Credentials implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private HashMap<String, String> loginPageInfo = new HashMap<>();
+    private HashMap<String, UserAccount> accounts = new HashMap<>();
     private static final String FILE_NAME = "users.dat";
 
-    public boolean signUp(String username, String password) {
+    public boolean signUp(String username, String password, String email, boolean twoFactorEnabled) {
         username = username.trim();
         password = password.trim();
+        email = email.trim();
 
-        if (loginPageInfo.containsKey(username)) {
+        if (accounts.containsKey(username)) {
             return false; // Username already exists
         }
-        loginPageInfo.put(username, password);
+        
+        UserAccount account = new UserAccount(username, password, email, twoFactorEnabled);
+        accounts.put(username, account);
         saveToFile();
         return true; // Account created
     }
@@ -23,20 +26,22 @@ public class Credentials implements Serializable {
         username = username.trim();
         password = password.trim();
 
-        if (!loginPageInfo.containsKey(username)) {
-            return false; // Username not found
-        }
-        return loginPageInfo.get(username).equals(password);
+        UserAccount account = accounts.get(username);
+        return account != null && account.getPassword().equals(password);
     }
 
     public boolean deleteAccount(String username) {
         username = username.trim();
 
-        if (loginPageInfo.remove(username) != null) {
+        if (accounts.remove(username) != null) {
             saveToFile();
             return true; // Deleted
         }
         return false; // Not found
+    }
+
+    public UserAccount getAccount(String username) {
+        return accounts.get(username.trim());
     }
 
     // Save credentials to file

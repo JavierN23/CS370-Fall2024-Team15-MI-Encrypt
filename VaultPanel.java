@@ -108,6 +108,9 @@ public class VaultPanel extends JPanel {
         JButton del = UI.deleteButton("Delete");
         JButton copyUser = UI.secondaryButton("Copy Username");
         JButton copyPass = UI.secondaryButton("Copy Password");
+        JButton generateBtn = UI.secondaryButton("Generate Password");
+
+
 
         buttons.add(add);
         buttons.add(view);
@@ -115,6 +118,7 @@ public class VaultPanel extends JPanel {
         buttons.add(del);
         buttons.add(copyUser);
         buttons.add(copyPass);
+        buttons.add(generateBtn);
 
         // Layout placement
         page.add(top, BorderLayout.NORTH);
@@ -141,6 +145,7 @@ public class VaultPanel extends JPanel {
 
         copyUser.addActionListener(e -> copySelectedUsername());
         copyPass.addActionListener(e -> copySelectedPassword());
+        generateBtn.addActionListener (e -> showGeneratedPasswordDialog());
 
         // Double click to view entry
         list.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -231,6 +236,32 @@ public class VaultPanel extends JPanel {
         UI.styleInput(site);
         UI.styleInput(u);
         UI.styleInput(p);
+
+        JButton generateBtn = UI.secondaryButton("Generate Password");
+        JButton copy = UI.secondaryButton("Copy Generated");
+
+        JPanel passwordButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        passwordButtons.setOpaque(false);
+        passwordButtons.add(generateBtn);
+        passwordButtons.add(copy);
+
+        JPanel passwordPanel = new JPanel();
+        passwordPanel.setOpaque(false);
+        passwordPanel.setLayout(new BoxLayout(passwordPanel, BoxLayout.Y_AXIS));
+        passwordPanel.add(p);
+        passwordPanel.add(Box.createVerticalStrut(6));
+        passwordPanel.add(passwordButtons);
+
+        generateBtn.addActionListener(e -> p.setText(PasswordUtils.generatePassword()));
+        copy.addActionListener(e -> {
+            String pw = new String(p.getPassword());
+            if (!pw.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No Password to copy.");
+                return;
+            }
+            copyToClipboard(pw);
+            JOptionPane.showMessageDialog(this, "Generated password copied.");
+        });
 
         Object[] msg = {"Site:", site, "Username:", u, "Password:", p};
         int ok = JOptionPane.showConfirmDialog(this, msg, "Add Entry", JOptionPane.OK_CANCEL_OPTION);
@@ -378,6 +409,56 @@ public class VaultPanel extends JPanel {
         }
         copyToClipboard(sel.getPassword());
         JOptionPane.showMessageDialog(this, "Password copied.");
+    }
+
+    // Generate password dialog
+    private void showGeneratedPasswordDialog() {
+        JTextField passwordField = new JTextField(PasswordUtils.generatePassword());
+        passwordField.setEditable(false);
+        UI.styleInput(passwordField);
+
+        JButton regenerateBtn = UI.secondaryButton("Regenerate");
+        JButton copyBtn = UI.secondaryButton("Copy");
+        JButton closeBtn = UI.secondaryButton("Close");
+
+        JPanel panel = new JPanel();
+        panel.setBackground(UI.BG);
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        JLabel label = new JLabel("Generated Password:");
+        label.setForeground(UI.TEXT);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttons.setOpaque(false);
+        buttons.add(regenerateBtn);
+        buttons.add(copyBtn);
+        buttons.add(closeBtn);
+
+        panel.add(label);
+        panel.add(Box.createVerticalStrut(6));
+        panel.add(passwordField);
+        panel.add(Box.createVerticalStrut(12));
+        panel.add(buttons);
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Generate Password", true);
+        dialog.setContentPane(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+
+        regenerateBtn.addActionListener(e -> passwordField.setText(PasswordUtils.generatePassword()));
+
+        copyBtn.addActionListener(e -> {
+            copyToClipboard(passwordField.getText());
+            JOptionPane.showMessageDialog(dialog, "Password copied.");
+        });
+
+        closeBtn.addActionListener(e -> dialog.dispose());
+
+        dialog.setVisible(true);
     }
 
     // Copy text to clipboard

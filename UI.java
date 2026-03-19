@@ -1,4 +1,5 @@
 import java.awt.*;
+import java.io.File;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -126,5 +127,21 @@ public class UI {
         c.setForeground(TEXT);
         c.setBorder(new EmptyBorder(4, 10, 4, 10));
         return c;
+    }
+
+    public static File dataDir() {
+        File dir = new File(System.getProperty("user.home"), ".MI-Encrypt");
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        return dir;
+    }
+
+    public static File usersFile() {
+        return new File(dataDir(), "users.dat");
+    }
+
+    public static File passwordsFile() {
+        return new File(dataDir(), "passwords.dat");
     }
 }

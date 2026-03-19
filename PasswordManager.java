@@ -38,7 +38,7 @@ public class PasswordManager implements Serializable {
 
     // Save to file
     public void saveToFile() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(UI.passwordsFile()))) {
             oos.writeObject(this);
         } catch (IOException e) {
             System.out.println("Error saving password data: " + e.getMessage());
@@ -47,9 +47,9 @@ public class PasswordManager implements Serializable {
 
     // Load from file
     public static PasswordManager loadFromFile() {
-        File file = new File(FILE_NAME);
+        File file = UI.passwordsFile();
         if (!file.exists()) return new PasswordManager();
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE_NAME))) {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
             Object obj = ois.readObject();
             if (obj instanceof PasswordManager) return (PasswordManager) obj;
         } catch (IOException | ClassNotFoundException e) {

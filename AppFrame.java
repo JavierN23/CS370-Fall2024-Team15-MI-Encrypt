@@ -9,6 +9,7 @@ public class AppFrame extends JFrame {
     private final JPanel cards = new JPanel(layout);
 
     private final LoginPanel login;
+    private final SignUpPanel signUp;
     private final ChoicePanel choice;
     private final VaultPanel vault;
 
@@ -29,11 +30,13 @@ public class AppFrame extends JFrame {
 
         // Panels
         login = new LoginPanel(this, creds);
+        signUp = new SignUpPanel(this, creds);
         choice = new ChoicePanel(this);
         vault = new VaultPanel(this, pm);
 
         // Panels with CardLayout
         cards.add(login, "LOGIN");
+        cards.add(signUp, "SIGNUP");
         cards.add(choice, "CHOICE");
         cards.add(vault, "VAULT");
 
@@ -71,6 +74,10 @@ public class AppFrame extends JFrame {
         currentUser = null;
         login.clear();
         layout.show(cards, "LOGIN");
+    }
+
+    public void showSignUp() {
+        layout.show(cards, "SIGNUP");
     }
 
     // Show choice page after login

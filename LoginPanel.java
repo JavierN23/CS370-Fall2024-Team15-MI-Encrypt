@@ -160,7 +160,7 @@ public class LoginPanel extends JPanel {
 
     private void doLogin() {
         String u = user.getText().trim();
-        String p = new String(pass.getPassword()).trim();
+        String p = new String(pass.getPassword());
 
         if (u.isEmpty() || p.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Enter both username and password.");
@@ -176,19 +176,7 @@ public class LoginPanel extends JPanel {
         }
     }
 
-    private void doSignup() {
-        String u = user.getText().trim();
-        String p = new String(pass.getPassword()).trim();
-
-        if (u.isEmpty() || p.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Enter both username and password.");
-            return;
-        }
-
-        if (creds.signUp(u, p)) {
-            JOptionPane.showMessageDialog(this, "Account created! You can now log in.");
-        } else {
-            JOptionPane.showMessageDialog(this, "Username already exists.");
-        }
+    public void doSignup() {
+        app.showSignUp();
     }
 }
