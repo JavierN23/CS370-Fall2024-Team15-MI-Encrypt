@@ -169,6 +169,7 @@ public class LoginPanel extends JPanel {
 
         if (creds.login(u, p)) {
             app.setCurrentUser(u);
+            SessionManager.startSession(u);
             JOptionPane.showMessageDialog(this, "Login successful!");
             app.showChoice();
         } else {
