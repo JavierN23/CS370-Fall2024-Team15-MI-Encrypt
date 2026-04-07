@@ -44,6 +44,15 @@ public class AppFrame extends JFrame {
         setContentPane(cards);
         showLogin();
         setVisible(true);
+
+        new javax.swing.Timer(5000, e -> {
+    if (SessionManager.isLoggedIn() && SessionManager.isExpired()) {
+        JOptionPane.showMessageDialog(this, "Session expired. Please log in again.");
+
+        SessionManager.endSession();
+        showLogin();
+    }
+}).start();
         
     }
 
