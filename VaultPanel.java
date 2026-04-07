@@ -129,23 +129,48 @@ public class VaultPanel extends JPanel {
         add(page, BorderLayout.CENTER);
 
         // Actions
-        back.addActionListener(e -> app.showChoice());
-        logout.addActionListener(e -> app.showLogin());
+    back.addActionListener(e -> {
+    SessionManager.updateActivity();
+    app.showChoice();
+});
+    logout.addActionListener(e -> {
+    SessionManager.endSession();
+    app.showLogin();
+});
 
-        add.addActionListener(e -> {
-            addEntry();
-            pm.saveToFile();
-        });
-        view.addActionListener(e -> viewEntry());
-        edit.addActionListener(e -> editEntry()); // editEntry saves
-        del.addActionListener(e -> {
-            deleteEntry();
+     add.addActionListener(e -> {
+    SessionManager.updateActivity();
+    addEntry();
+    pm.saveToFile();
+});
+    view.addActionListener(e -> {
+    SessionManager.updateActivity();
+    viewEntry();
+});
+    edit.addActionListener(e -> {
+    SessionManager.updateActivity();
+    editEntry();
+});  // editEntry saves
+     del.addActionListener(e -> {
+    SessionManager.updateActivity();
+    deleteEntry();
+});
             // deleteEntry saves if it deletes
         });
 
-        copyUser.addActionListener(e -> copySelectedUsername());
-        copyPass.addActionListener(e -> copySelectedPassword());
-        generateBtn.addActionListener (e -> showGeneratedPasswordDialog());
+    copyUser.addActionListener(e -> {
+    SessionManager.updateActivity();
+    copySelectedUsername();
+});
+
+    copyPass.addActionListener(e -> {
+    SessionManager.updateActivity();
+    copySelectedPassword();
+});
+    generateBtn.addActionListener(e -> {
+    SessionManager.updateActivity();
+    showGeneratedPasswordDialog();
+});
 
         // Double click to view entry
         list.addMouseListener(new java.awt.event.MouseAdapter() {
