@@ -81,6 +81,7 @@ public class AppFrame extends JFrame {
     
     public void showLogin() {
         currentUser = null;
+        SessionManager.endSession();
         login.clear();
         layout.show(cards, "LOGIN");
     }
