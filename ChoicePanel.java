@@ -40,9 +40,21 @@ public class ChoicePanel extends JPanel {
         add(page, BorderLayout.CENTER);
 
         // When I click the buttons, I want to go to the Specific account or back to login
-        personal.addActionListener(e -> app.showVault("Personal"));
-        business.addActionListener(e -> app.showVault("Business"));
-        logout.addActionListener(e -> app.showLogin());
+personal.addActionListener(e -> {
+    SessionManager.updateActivity();
+    app.showVault("Personal");
+});
+
+business.addActionListener(e -> {
+    SessionManager.updateActivity();
+    app.showVault("Business");
+});
+
+logout.addActionListener(e -> {
+    SessionManager.endSession();
+    app.showLogin();
+});
+
     }
 
     public void setUser(String username) {
