@@ -3,40 +3,129 @@ import java.util.*;
 
 public class PasswordManager implements Serializable {
     private static final long serialVersionUID = 1L;
+
     private Map<String, List<PasswordEntry>> entriesByVault = new HashMap<>();
-    private static final String FILE_NAME = "passwords.dat";
 
     private String key(String username, String accountType) {
+        if ("Business".equalsIgnoreCase(accountType)) {
+            return "BUSINESS_SHARED";
+        }
         return username.trim() + "|" + accountType.trim();
     }
 
-    public List<PasswordEntry> getEntriesForUser(String username, String accountType) {
+    private List<PasswordEntry> getVaultEntries(String username, String accountType) {
         return entriesByVault.computeIfAbsent(key(username, accountType), k -> new ArrayList<>());
     }
 
-    // AddEntry
-    public void addEntry(String username, String accountType, PasswordEntry entry) {
-        getEntriesForUser(username, accountType).add(entry);
-        saveToFile();
+    public List<PasswordEntry> getVisibleEntries(UserAccount user, String accountType) {
+        if (user == null || accountType == null) {
+            return new ArrayList<>();
+        }
+
+        List<PasswordEntry> entries = getVaultEntries(user.getUsername(), accountType);
+
+        // Personal vault: user sees their own entries
+        if (!"Business".equalsIgnoreCase(accountType)) {
+            return new ArrayList<>(entries);
+        }
+
+        // Business vault: unauthorized users see nothing
+        if (!user.isBusinessAuthorized()) {
+            return new ArrayList<>();
+        }
+
+        // Admin sees everything
+        if (user.isBusinessAdmin()) {
+            return new ArrayList<>(entries);
+        }
+
+        // Employee sees only entries matching their groups
+        List<PasswordEntry> filtered = new ArrayList<>();
+        for (PasswordEntry entry : entries) {
+            if (entry != null && user.hasBusinessGroup(entry.getBusinessGroup())) {
+                filtered.add(entry);
+            }
+        }
+
+        return filtered;
     }
 
-    // RemoveEntry
-    public void removeEntry(String username, String accountType, int index) {
-        List<PasswordEntry> list = getEntriesForUser(username, accountType);
+    public boolean canAccessBusinessVault(UserAccount user) {
+        return user != null && user.isBusinessAuthorized();
+    }
+
+    public boolean canModifyBusinessVault(UserAccount user) {
+        return user != null
+                && user.isBusinessAuthorized()
+                && user.isBusinessAdmin();
+    }
+
+    public boolean addEntry(UserAccount user, String accountType, PasswordEntry entry) {
+        if (user == null || accountType == null || entry == null) {
+            return false;
+        }
+
+        if ("Business".equalsIgnoreCase(accountType) && !canModifyBusinessVault(user)) {
+            return false;
+        }
+
+        getVaultEntries(user.getUsername(), accountType).add(entry);
+        saveToFile();
+        return true;
+    }
+
+    public boolean updateEntry(UserAccount user, String accountType, int index, PasswordEntry updatedEntry) {
+        if (user == null || accountType == null || updatedEntry == null) {
+            return false;
+        }
+
+        if ("Business".equalsIgnoreCase(accountType) && !canModifyBusinessVault(user)) {
+            return false;
+        }
+
+        List<PasswordEntry> list = getVaultEntries(user.getUsername(), accountType);
+        if (index >= 0 && index < list.size()) {
+            list.set(index, updatedEntry);
+            saveToFile();
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean removeEntry(UserAccount user, String accountType, int index) {
+        if (user == null || accountType == null) {
+            return false;
+        }
+
+        if ("Business".equalsIgnoreCase(accountType) && !canModifyBusinessVault(user)) {
+            return false;
+        }
+
+        List<PasswordEntry> list = getVaultEntries(user.getUsername(), accountType);
         if (index >= 0 && index < list.size()) {
             list.remove(index);
             saveToFile();
+            return true;
         }
+
+        return false;
     }
 
-    // Delete all entries for a user (when account is deleted)
+    public List<PasswordEntry> getRawEntriesForVault(String username, String accountType) {
+        return new ArrayList<>(getVaultEntries(username, accountType));
+    }
+
     public void deleteUser(String username) {
+        if (username == null) {
+            return;
+        }
+
         String prefix = username.trim() + "|";
         entriesByVault.keySet().removeIf(k -> k.startsWith(prefix));
         saveToFile();
     }
 
-    // Save to file
     public void saveToFile() {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(UI.passwordsFile()))) {
             oos.writeObject(this);
@@ -45,16 +134,21 @@ public class PasswordManager implements Serializable {
         }
     }
 
-    // Load from file
     public static PasswordManager loadFromFile() {
         File file = UI.passwordsFile();
-        if (!file.exists()) return new PasswordManager();
+        if (!file.exists()) {
+            return new PasswordManager();
+        }
+
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
             Object obj = ois.readObject();
-            if (obj instanceof PasswordManager) return (PasswordManager) obj;
+            if (obj instanceof PasswordManager) {
+                return (PasswordManager) obj;
+            }
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("Error loading password data: " + e.getMessage());
         }
+
         return new PasswordManager();
     }
 }

@@ -8,12 +8,14 @@ import javax.swing.event.DocumentListener;
 public class VaultPanel extends JPanel {
     private final AppFrame app;
     private final PasswordManager pm;
+    private final Credentials creds;
 
     private String user;
     private String type;
 
     // Header
     private final JLabel title = UI.h1("");
+    private final JLabel accessStatus = UI.subtle("");
 
     // Search
     private final JTextField searchField = new JTextField(18);
@@ -22,15 +24,26 @@ public class VaultPanel extends JPanel {
     private final DefaultListModel<PasswordEntry> model = new DefaultListModel<>();
     private final JList<PasswordEntry> list = new JList<>(model);
 
+    // Buttons
+    private final JButton add = UI.accentButton("Add");
+    private final JButton view = UI.secondaryButton("View");
+    private final JButton edit = UI.secondaryButton("Edit");
+    private final JButton del = UI.deleteButton("Delete");
+    private final JButton copyUser = UI.secondaryButton("Copy Username");
+    private final JButton copyPass = UI.secondaryButton("Copy Password");
+    private final JButton generateBtn = UI.secondaryButton("Generate Password");
+
     // Scaling
     private final Dimension baseSize = new Dimension(1000, 700);
     private float lastScale = 1.0f;
 
     private final EntryRenderer renderer = new EntryRenderer();
 
-    public VaultPanel(AppFrame app, PasswordManager pm) {
+    public VaultPanel(AppFrame app, PasswordManager pm, Credentials creds) {
         this.app = app;
         this.pm = pm;
+        this.creds = creds;
+
 
         // Use BorderLayout page so CENTER grows when maximized
         JPanel page = UI.pageBorder();
@@ -49,7 +62,13 @@ public class VaultPanel extends JPanel {
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         left.add(title);
 
-        UI.space(left, 10);
+        UI.space(left, 6);
+
+        accessStatus.setAlignmentX(Component.LEFT_ALIGNMENT);
+        accessStatus.setVisible(false);
+        left.add(accessStatus);
+
+        UI.space(left, 12);
 
         // Search row
         JPanel searchRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
@@ -102,16 +121,6 @@ public class VaultPanel extends JPanel {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         buttons.setOpaque(false);
 
-        JButton add = UI.accentButton("Add");
-        JButton view = UI.secondaryButton("View");
-        JButton edit = UI.secondaryButton("Edit");
-        JButton del = UI.deleteButton("Delete");
-        JButton copyUser = UI.secondaryButton("Copy Username");
-        JButton copyPass = UI.secondaryButton("Copy Password");
-        JButton generateBtn = UI.secondaryButton("Generate Password");
-
-
-
         buttons.add(add);
         buttons.add(view);
         buttons.add(edit);
@@ -129,48 +138,17 @@ public class VaultPanel extends JPanel {
         add(page, BorderLayout.CENTER);
 
         // Actions
-    back.addActionListener(e -> {
-    SessionManager.updateActivity();
-    app.showChoice();
-});
-    logout.addActionListener(e -> {
-    SessionManager.endSession();
-    app.showLogin();
-});
+        back.addActionListener(e -> app.showChoice());
+        logout.addActionListener(e -> app.showLogin());
 
-     add.addActionListener(e -> {
-    SessionManager.updateActivity();
-    addEntry();
-    pm.saveToFile();
-});
-    view.addActionListener(e -> {
-    SessionManager.updateActivity();
-    viewEntry();
-});
-    edit.addActionListener(e -> {
-    SessionManager.updateActivity();
-    editEntry();
-});  // editEntry saves
-     del.addActionListener(e -> {
-    SessionManager.updateActivity();
-    deleteEntry();
-});
-            // deleteEntry saves if it deletes
-        });
+        add.addActionListener(e -> addEntry());
+        view.addActionListener(e -> viewEntry());
+        edit.addActionListener(e -> editEntry()); // editEntry saves
+        del.addActionListener(e -> deleteEntry());
 
-    copyUser.addActionListener(e -> {
-    SessionManager.updateActivity();
-    copySelectedUsername();
-});
-
-    copyPass.addActionListener(e -> {
-    SessionManager.updateActivity();
-    copySelectedPassword();
-});
-    generateBtn.addActionListener(e -> {
-    SessionManager.updateActivity();
-    showGeneratedPasswordDialog();
-});
+        copyUser.addActionListener(e -> copySelectedUsername());
+        copyPass.addActionListener(e -> copySelectedPassword());
+        generateBtn.addActionListener (e -> showGeneratedPasswordDialog());
 
         // Double click to view entry
         list.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -217,8 +195,39 @@ public class VaultPanel extends JPanel {
         this.user = username;
         this.type = accountType;
 
-        title.setText(accountType + " Vault — " + username);
+        UserAccount account = creds.getAccount(username);
+
+        if (account == null) {
+            JOptionPane.showMessageDialog(this, "User account not found.");
+            app.showChoice();
+            return;
+        }
+
+        if ("Business".equalsIgnoreCase(accountType)) {
+            String role = account.getBusinessRole();
+            if (role == null || role.trim().isEmpty()) {
+                role = "employee";
+            }
+            title.setText("Business Vault — " + role + " — " + username);
+
+            if (!account.isBusinessAuthorized()) {
+                accessStatus.setText("Business Access Pending. Please contact your administrator.");
+                accessStatus.setVisible(true);
+            } else if (account.isBusinessAdmin()) {
+                accessStatus.setText("Full business vault access.");
+                accessStatus.setVisible(true);
+            } else {
+                accessStatus.setText("Read-only access to authorized business groups.");
+                accessStatus.setVisible(true);
+            }
+        } else {
+            title.setText("Personal Vault — " + username);
+            accessStatus.setText("");
+            accessStatus.setVisible(false);
+        }
+
         searchField.setText("");
+        updatePermissions();
         refresh();
     }
 
@@ -226,7 +235,13 @@ public class VaultPanel extends JPanel {
         model.clear();
 
         String q = searchField.getText().trim().toLowerCase();
-        List<PasswordEntry> entries = pm.getEntriesForUser(user, type);
+        UserAccount account = creds.getAccount(user);
+
+        if (account == null) {
+            return;
+        }
+
+        List<PasswordEntry> entries = pm.getVisibleEntries(account, type);
 
         for (PasswordEntry e : entries) {
             String hay = (e.getSite() + " " + e.getUsername()).toLowerCase();
@@ -235,6 +250,51 @@ public class VaultPanel extends JPanel {
             }
         }
     }
+
+    private void updatePermissions() {
+        boolean canView = canViewBusinessVault();
+        boolean canModify = canModifyBusinessVault();
+        boolean isBusinessVault = "Business".equalsIgnoreCase(type);
+
+        if (!isBusinessVault) {
+            add.setEnabled(true);
+            edit.setEnabled(true);
+            del.setEnabled(true);
+            view.setEnabled(true);
+            copyUser.setEnabled(true);
+            copyPass.setEnabled(true);
+            generateBtn.setEnabled(true);
+            return;
+        }
+        
+        view.setEnabled(canView);
+        copyUser.setEnabled(canView);
+        copyPass.setEnabled(canView);
+
+        add.setEnabled(canModify);
+        edit.setEnabled(canModify);
+        del.setEnabled(canModify);
+        generateBtn.setEnabled(canModify);
+    }
+
+    private boolean canViewBusinessVault() {
+        if (!"Business".equalsIgnoreCase(type)) {
+            return true;
+        }
+
+        UserAccount account = creds.getAccount(user);
+        return pm.canAccessBusinessVault(account);
+    }
+
+    private boolean canModifyBusinessVault() {
+        if (!"Business".equalsIgnoreCase(type)) {
+            return true;
+        }
+
+        UserAccount account = creds.getAccount(user);
+        return pm.canModifyBusinessVault(account);
+    }
+
 
     // Apply scale to key UI elements
     public void applyScale(float scale) {
@@ -254,6 +314,17 @@ public class VaultPanel extends JPanel {
 
     // Add new entry
     private void addEntry() {
+        UserAccount account = creds.getAccount(user);
+        if (account == null) {
+            JOptionPane.showMessageDialog(this, "User account not found.");
+            return;
+        }
+
+        if ("Business".equalsIgnoreCase(type) && !canModifyBusinessVault()) {
+            JOptionPane.showMessageDialog(this, "You don't have permission to modify this vault.");
+            return;
+        }
+
         JTextField site = new JTextField();
         JTextField u = new JTextField();
         JPasswordField p = new JPasswordField();
@@ -262,12 +333,12 @@ public class VaultPanel extends JPanel {
         UI.styleInput(u);
         UI.styleInput(p);
 
-        JButton generateBtn = UI.secondaryButton("Generate Password");
+        JButton generateInsideBtn = UI.secondaryButton("Generate Password");
         JButton copy = UI.secondaryButton("Copy Generated");
 
         JPanel passwordButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         passwordButtons.setOpaque(false);
-        passwordButtons.add(generateBtn);
+        passwordButtons.add(generateInsideBtn);
         passwordButtons.add(copy);
 
         JPanel passwordPanel = new JPanel();
@@ -277,10 +348,10 @@ public class VaultPanel extends JPanel {
         passwordPanel.add(Box.createVerticalStrut(6));
         passwordPanel.add(passwordButtons);
 
-        generateBtn.addActionListener(e -> p.setText(PasswordUtils.generatePassword()));
+        generateInsideBtn.addActionListener(e -> p.setText(PasswordUtils.generatePassword()));
         copy.addActionListener(e -> {
             String pw = new String(p.getPassword());
-            if (!pw.isEmpty()) {
+            if (pw.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "No Password to copy.");
                 return;
             }
@@ -288,20 +359,61 @@ public class VaultPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Generated password copied.");
         });
 
-        Object[] msg = {"Site:", site, "Username:", u, "Password:", p};
-        int ok = JOptionPane.showConfirmDialog(this, msg, "Add Entry", JOptionPane.OK_CANCEL_OPTION);
-        if (ok != JOptionPane.OK_OPTION) return;
+        if ("Business".equalsIgnoreCase(type)) {
+            JTextField groupField = new JTextField();
+            UI.styleInput(groupField);
 
-        String s = site.getText().trim();
-        String un = u.getText().trim();
-        String pw = new String(p.getPassword()).trim();
+            Object[] msg = {
+                "Site:", site,
+                "Username:", u,
+                "Password:", passwordPanel,
+                "Business Group:", groupField
+            };
 
-        if (s.isEmpty() || un.isEmpty() || pw.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "All fields required.");
-            return;
+            int ok = JOptionPane.showConfirmDialog(this, msg, "Add Entry", JOptionPane.OK_CANCEL_OPTION);
+            if (ok != JOptionPane.OK_OPTION) return;
+
+            String s = site.getText().trim();
+            String un = u.getText().trim();
+            String pw = new String(p.getPassword()).trim();
+            String group = groupField.getText().trim();
+
+            if (s.isEmpty() || un.isEmpty() || pw.isEmpty() || group.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "All fields required.");
+                return;
+            }
+
+            boolean added = pm.addEntry(account, type, new PasswordEntry(s, un, pw, group));
+            if (!added) {
+                JOptionPane.showMessageDialog(this, "Could not add entry.");
+                return;
+            }
+        } else {
+            Object[] msg = {
+                "Site:", site,
+                "Username:", u,
+                "Password:", passwordPanel
+            };
+
+            int ok = JOptionPane.showConfirmDialog(this, msg, "Add Entry", JOptionPane.OK_CANCEL_OPTION);
+            if (ok != JOptionPane.OK_OPTION) return;
+
+            String s = site.getText().trim();
+            String un = u.getText().trim();
+            String pw = new String(p.getPassword()).trim();
+
+            if (s.isEmpty() || un.isEmpty() || pw.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "All fields required.");
+                return;
+            }
+
+            boolean added = pm.addEntry(account, type, new PasswordEntry(s, un, pw));
+            if (!added) {
+                JOptionPane.showMessageDialog(this, "Could not add entry.");
+                return;
+            }
         }
 
-        pm.addEntry(user, type, new PasswordEntry(s, un, pw));
         refresh();
     }
 
@@ -340,6 +452,15 @@ public class VaultPanel extends JPanel {
         panel.add(Box.createVerticalStrut(6));
         panel.add(pwd);
         panel.add(Box.createVerticalStrut(10));
+
+        if ("Business".equalsIgnoreCase(type) && sel.getBusinessGroup() != null) {
+            JLabel group = new JLabel("Business Group: " + sel.getBusinessGroup());
+            group.setForeground(UI.TEXT);
+            panel.add(group);
+            panel.add(Box.createVerticalStrut(10));
+        }
+        
+        panel.add(Box.createVerticalStrut(6));
         panel.add(show);
 
         JOptionPane.showMessageDialog(this, panel, "Entry", JOptionPane.PLAIN_MESSAGE);
@@ -347,6 +468,17 @@ public class VaultPanel extends JPanel {
 
     // Edit selected entry
     private void editEntry() {
+        UserAccount account = creds.getAccount(user);
+        if (account == null) {
+            JOptionPane.showMessageDialog(this, "User account not found.");
+            return;
+        }
+
+        if ("Business".equalsIgnoreCase(type) && !canModifyBusinessVault()) {
+            JOptionPane.showMessageDialog(this, "You don't have permission to edit business entries.");
+            return;
+        }
+
         PasswordEntry sel = list.getSelectedValue();
         if (sel == null) {
             JOptionPane.showMessageDialog(this, "Select an entry.");
@@ -361,7 +493,27 @@ public class VaultPanel extends JPanel {
         UI.styleInput(u);
         UI.styleInput(p);
 
-        Object[] msg = {"Site:", site, "Username:", u, "New Password (leave blank to keep current):", p};
+        JTextField groupField = null;
+
+        Object[] msg;
+        if ("Business".equalsIgnoreCase(type)) {
+            groupField = new JTextField(sel.getBusinessGroup() == null ? "" : sel.getBusinessGroup());
+            UI.styleInput(groupField);
+
+            msg = new Object[] {
+                "Site:", site,
+                "Username:", u,
+                "New Password (leave blank to keep current):", p,
+                "Business Group:", groupField
+            };
+        } else {
+            msg = new Object[] {
+                "Site:", site,
+                "Username:", u,
+                "New Password (leave blank to keep current):", p
+            };
+        }
+
         int ok = JOptionPane.showConfirmDialog(this, msg, "Edit Entry", JOptionPane.OK_CANCEL_OPTION);
         if (ok != JOptionPane.OK_OPTION) return;
 
@@ -374,7 +526,7 @@ public class VaultPanel extends JPanel {
             return;
         }
 
-        List<PasswordEntry> full = pm.getEntriesForUser(user, type);
+        List<PasswordEntry> full = pm.getRawEntriesForVault(user, type);
         int realIndex = full.indexOf(sel);
 
         if (realIndex < 0) {
@@ -382,19 +534,44 @@ public class VaultPanel extends JPanel {
             return;
         }
 
-        PasswordEntry target = full.get(realIndex);
-        target.setSite(s);
-        target.setUsername(un);
+        String finalPassword = pw.isEmpty() ? sel.getPassword() : pw;
+        PasswordEntry updated;
 
-        if (!pw.isEmpty()) target.setPassword(pw);
+        if ("Business".equalsIgnoreCase(type)) {
+            String group = groupField.getText().trim();
+            if (group.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Business group is required.");
+                return;
+            }
 
-        pm.saveToFile();
+            updated = new PasswordEntry(s, un, finalPassword, group);
+        } else {
+            updated = new PasswordEntry(s, un, finalPassword);
+        }
+
+        boolean success = pm.updateEntry(account, type, realIndex, updated);
+        if (!success) {
+            JOptionPane.showMessageDialog(this, "Error updating entry.");
+            return;
+        }
+
         refresh();
         JOptionPane.showMessageDialog(this, "Entry updated.");
     }
 
     // Delete selected entry
     private void deleteEntry() {
+        UserAccount account = creds.getAccount(user);
+        if (account == null) {
+            JOptionPane.showMessageDialog(this, "User account not found.");
+            return;
+        }
+
+        if ("Business".equalsIgnoreCase(type) && !canModifyBusinessVault()) {
+            JOptionPane.showMessageDialog(this, "You don't have permission to delete business entries.");
+            return;
+        }
+
         PasswordEntry sel = list.getSelectedValue();
         if (sel == null) {
             JOptionPane.showMessageDialog(this, "Select an entry.");
@@ -402,36 +579,57 @@ public class VaultPanel extends JPanel {
         }
 
         int ok = JOptionPane.showConfirmDialog(this, "Delete this entry?", "Confirm", JOptionPane.YES_NO_OPTION);
-        if (ok != JOptionPane.YES_OPTION) return;
+        if (ok != JOptionPane.YES_OPTION) {
+            return;
+        }
 
-        List<PasswordEntry> full = pm.getEntriesForUser(user, type);
+        List<PasswordEntry> full = pm.getRawEntriesForVault(user, type);
         int realIndex = full.indexOf(sel);
 
-        if (realIndex >= 0) {
-            pm.removeEntry(user, type, realIndex);
-            pm.saveToFile();
-            refresh();
+        if (realIndex < 0) {
+            JOptionPane.showMessageDialog(this, "Error deleting entry.");
+            return;
         }
+
+        boolean removed = pm.removeEntry(account, type, realIndex);
+        if (!removed) {
+            JOptionPane.showMessageDialog(this, "Error deleting entry.");
+            return;
+        }
+
+        refresh();
     }
 
     // Copy username to clipboard
     private void copySelectedUsername() {
+        if ("Business".equalsIgnoreCase(type) && !canViewBusinessVault()) {
+            JOptionPane.showMessageDialog(this, "You don't have permission to view business entries.");
+            return;
+        }
+
         PasswordEntry sel = list.getSelectedValue();
         if (sel == null) {
             JOptionPane.showMessageDialog(this, "Select an entry first.");
             return;
         }
+
         copyToClipboard(sel.getUsername());
         JOptionPane.showMessageDialog(this, "Username copied.");
     }
 
     // Copy password to clipboard
     private void copySelectedPassword() {
+        if ("Business".equalsIgnoreCase(type) && !canViewBusinessVault()) {
+            JOptionPane.showMessageDialog(this, "You don't have permission to view business entries.");
+            return;
+        }
+
         PasswordEntry sel = list.getSelectedValue();
         if (sel == null) {
             JOptionPane.showMessageDialog(this, "Select an entry first.");
             return;
         }
+        
         copyToClipboard(sel.getPassword());
         JOptionPane.showMessageDialog(this, "Password copied.");
     }
