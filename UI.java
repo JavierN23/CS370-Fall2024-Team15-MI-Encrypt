@@ -34,11 +34,13 @@ public class UI {
         c.setLayout(new BoxLayout(c, BoxLayout.Y_AXIS));
         c.setBorder(new CompoundBorder(
             new LineBorder(BORDER, 1, true), 
-            new EmptyBorder(14, 14, 14, 14)));
+            new EmptyBorder(20, 20, 20, 20)));
 
         c.setBackground(CARD);
 
-        c.setPreferredSize(new Dimension(420, 320));
+        c.setPreferredSize(new Dimension(760, 620));
+        c.setMinimumSize(new Dimension(560, 500));
+        c.setMaximumSize(new Dimension(760, 620));
         return c;
     }
 
@@ -73,11 +75,26 @@ public class UI {
         p.add(Box.createVerticalStrut(px));
     }
 
-    public static JPanel row(Component left, Component right) {
-        JPanel r = new JPanel(new BorderLayout(10, 0));
+    public static JPanel row(String labelText, JComponent field) {
+        JPanel r = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
         r.setOpaque(false);
-        r.add(left, BorderLayout.WEST);
-        r.add(right, BorderLayout.CENTER);
+        r.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel lbl = label(labelText);
+        Dimension labelSize = new Dimension(90, 34);
+        lbl.setPreferredSize(labelSize);
+        lbl.setMaximumSize(labelSize);
+        lbl.setMinimumSize(labelSize);
+
+        Dimension fieldSize = new Dimension(440, 42);
+        field.setPreferredSize(fieldSize);
+        field.setMaximumSize(fieldSize);
+        field.setMinimumSize(fieldSize);
+
+        r.add(lbl);
+        r.add(field);
+
+        r.setMaximumSize(new Dimension(560, 40));
         return r;
     }
 
@@ -90,7 +107,16 @@ public class UI {
 
         f.setBorder(new CompoundBorder(
             new LineBorder(BORDER, 1, true),
-            new EmptyBorder(8, 12, 8, 12)));
+            new EmptyBorder(10, 12, 10, 12)));
+    }
+
+    public static void styleInput(JComboBox<?> box) {
+        box.setBackground(new Color(34, 34, 40));
+        box.setForeground(TEXT);
+        box.setFont(box.getFont().deriveFont(14f));
+        box.setBorder(new CompoundBorder(
+            new LineBorder(BORDER, 1, true),
+            new EmptyBorder(6, 10, 6, 10)));
     }
 
     public static void styleButton(JButton b, Color bg) {

@@ -7,12 +7,17 @@ public class PasswordEntry implements Serializable {
     private String site;
     private String username;
     private String encryptedPassword;
+    private String businessGroup; // For business accounts, indicates which group this entry belongs to
 
     public PasswordEntry(String site, String Username, String plainPassword) {
-        this.site = site;
-        this.username = Username;
-        this.encryptedPassword = EncryptionService.encryptCTR(plainPassword);
+        this(site, Username, plainPassword, null);
+    }
 
+    public PasswordEntry(String site, String username, String plainPassword, String businessGroup) {
+        this.site = site;
+        this.username = username;
+        this.encryptedPassword = EncryptionService.encryptCTR(plainPassword);
+        this.businessGroup = businessGroup;
     }
 
     public String getSite(){
@@ -25,8 +30,12 @@ public class PasswordEntry implements Serializable {
         return EncryptionService.decryptCTR(encryptedPassword);
     }
 
-    public String getEncyptedPassword() {
+    public String getEncryptedPassword() {
         return encryptedPassword;
+    }
+
+    public String getBusinessGroup() {
+        return businessGroup;
     }
 
     public void setSite(String site) {
@@ -39,6 +48,10 @@ public class PasswordEntry implements Serializable {
 
     public void setPassword(String plainPassword) {
         this.encryptedPassword = EncryptionService.encryptCTR(plainPassword);
+    }
+
+    public void setBusinessGroup(String businessGroup) {
+        this.businessGroup = businessGroup;
     }
 
     @Override

@@ -6,6 +6,7 @@ public class SessionManager {
     private static String sessionId;
     private static long lastActivityTime;
 
+    //  Adjust depending on how strict you want the timeout to be.
     private static final long TIMEOUT = 90 * 1000; 
 
     public static void startSession(String username) {
@@ -18,16 +19,23 @@ public class SessionManager {
     }
 
     public static void endSession() {
+        System.out.println("Session ended for " + currentUser);
         currentUser = null;
         sessionId = null;
         lastActivityTime = 0;
     }
 
     public static void updateActivity() {
-        lastActivityTime = System.currentTimeMillis();
+        if (currentUser != null) {
+            lastActivityTime = System.currentTimeMillis();
+        }
     }
 
     public static boolean isExpired() {
+        if (currentUser == null) {
+            return true;
+        }
+        
         return System.currentTimeMillis() - lastActivityTime > TIMEOUT;
     }
 
@@ -37,5 +45,22 @@ public class SessionManager {
 
     public static String getUser() {
         return currentUser;
+    }
+
+    public static boolean validateSession(AppFrame app) {
+        if (!isLoggedIn()) {
+            app.showLogin();
+            return false;
+        }
+
+        if (isExpired()) {
+            endSession();
+            javax.swing.JOptionPane.showMessageDialog(null, "Session expired due to inactivity. Please log in again.");
+            app.showLogin();
+            return false;
+        }
+
+        updateActivity();
+        return true;
     }
 }

@@ -18,20 +18,21 @@ public class LoginPanel extends JPanel {
 
         setLayout(new BorderLayout());
 
-        JPanel page = UI.page();
+        JPanel page = new JPanel(new GridBagLayout());
+        page.setBackground(UI.BG);
 
         JPanel twoCol = new JPanel(new GridLayout(1, 2, 40, 0));
         twoCol.setOpaque(false);
 
         JPanel card = UI.card();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-
         card.add(Box.createVerticalGlue());
 
         JLabel title = UI.h1("Login");
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
         card.add(title);
 
-        UI.space(card, 6);
+        UI.space(card, 8);
 
         JLabel subtitle = UI.subtle("Log in or create an account to continue.");
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -39,15 +40,16 @@ public class LoginPanel extends JPanel {
 
         UI.space(card, 24);
 
-        card.add(UI.row(UI.label("Username"), user));
+        card.add(UI.row("Username", user));
         UI.space(card, 15);
 
-        card.add(UI.row(UI.label("Password"), pass));
+        card.add(UI.row("Password", pass));
         UI.space(card, 10);
 
         JCheckBox showPass = new JCheckBox("Show Password");
         showPass.setOpaque(false);
         showPass.setForeground(UI.MUTED);
+        showPass.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         char defaultEcho = pass.getEchoChar();
         showPass.addActionListener(e ->
@@ -88,15 +90,13 @@ public class LoginPanel extends JPanel {
         twoCol.add(card);
         twoCol.add(logoPanel);
 
-        page.add(Box.createVerticalGlue());
         page.add(twoCol);
-        page.add(Box.createVerticalGlue());
-
+        
         add(page, BorderLayout.CENTER);
 
         // Actions
         login.addActionListener(e -> doLogin());
-        signup.addActionListener(e -> doSignup());
+        signup.addActionListener(e -> doSignUp());
         reset.addActionListener(e -> clear());
 
         pass.addActionListener(e -> doLogin());
@@ -167,17 +167,46 @@ public class LoginPanel extends JPanel {
             return;
         }
 
-        if (creds.login(u, p)) {
-            app.setCurrentUser(u);
-            SessionManager.startSession(u);
-            JOptionPane.showMessageDialog(this, "Login successful!");
-            app.showChoice();
+        if (creds.isLocked(u)) {
+            JOptionPane.showMessageDialog(this, "This account is locked after 3 failed login attempts.");
+            return;
+        }
+         // Password correct — check whether this account uses 2FA
+        boolean success = creds.login(u, p);
+        if (success){
+            UserAccount account = creds.getAccount(u);
+
+            if (account == null) {
+                JOptionPane.showMessageDialog(this, "Account not found.");
+                return;
+            }
+            if (account.isTwoFactorEnabled()) {
+                // Don't set currentUser yet; wait until TOTP is verified
+                app.showTwoFactorVerify(u);
+            } else {   
+                // No 2FA — proceed straight to the app
+                SessionManager.startSession(u);
+                app.setCurrentUser(u);
+                JOptionPane.showMessageDialog(this, "Welcome to MI Encrypt, " + u + "   !");
+                app.showChoice();
+            }
+            return;
+        }
+
+        if (creds.isLocked(u)) {
+            JOptionPane.showMessageDialog(this, "This account has been locked after 3 failed login attempts.");
+            return;
+        }
+
+        UserAccount account = creds.getAccount(u);
+        if (account == null) {
+            JOptionPane.showMessageDialog(this, "Username not found.");
         } else {
-            JOptionPane.showMessageDialog(this, "Invalid username or password.");
+            int remaining = creds.getRemainingAttempts(u);
+            JOptionPane.showMessageDialog(this, "Incorrect password. Attempts remaining: " + remaining);
         }
     }
-
-    public void doSignup() {
+    private void doSignUp() {
         app.showSignUp();
     }
 }
