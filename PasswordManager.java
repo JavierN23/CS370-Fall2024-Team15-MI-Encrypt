@@ -17,6 +17,32 @@ public class PasswordManager implements Serializable {
         return entriesByVault.computeIfAbsent(key(username, accountType), k -> new ArrayList<>());
     }
 
+    public boolean canAccessBusinessVault(UserAccount user) {
+        return user != null && user.isBusinessAuthorized();
+    }
+
+    public boolean canModifyBusinessVault(UserAccount user) {
+        return user != null
+                && user.isBusinessAuthorized()
+                && user.isBusinessAdmin();
+    }
+
+    public boolean canViewBusinessEntry(UserAccount user, PasswordEntry entry) {
+        if (user == null || entry == null) {
+            return false;
+        }
+
+        if (!user.isBusinessAuthorized()) {
+            return false;
+        }
+
+        if (user.isBusinessAdmin()) {
+            return true;
+        }
+
+        return user.hasBusinessGroup(entry.getBusinessGroup());
+    }
+
     public List<PasswordEntry> getVisibleEntries(UserAccount user, String accountType) {
         if (user == null || accountType == null) {
             return new ArrayList<>();
@@ -50,14 +76,16 @@ public class PasswordManager implements Serializable {
         return filtered;
     }
 
-    public boolean canAccessBusinessVault(UserAccount user) {
-        return user != null && user.isBusinessAuthorized();
-    }
+    public String getDecryptedPassword(UserAccount user, String accountType, PasswordEntry entry) {
+        if (user == null || accountType == null || entry == null) {
+            return null;
+        }
 
-    public boolean canModifyBusinessVault(UserAccount user) {
-        return user != null
-                && user.isBusinessAuthorized()
-                && user.isBusinessAdmin();
+        if ("Business".equalsIgnoreCase(accountType) && !canViewBusinessEntry(user, entry)) {
+            return null;
+        }
+
+        return EncryptionService.decryptCTR(entry.getEncryptedPassword());
     }
 
     public boolean addEntry(UserAccount user, String accountType, PasswordEntry entry) {
@@ -65,8 +93,14 @@ public class PasswordManager implements Serializable {
             return false;
         }
 
-        if ("Business".equalsIgnoreCase(accountType) && !canModifyBusinessVault(user)) {
-            return false;
+        if ("Business".equalsIgnoreCase(accountType)) {
+            if (!canModifyBusinessVault(user)) {
+                return false;
+            }
+
+            if (entry.getBusinessGroup() == null || entry.getBusinessGroup().trim().isEmpty()) {
+                return false;
+            }
         }
 
         getVaultEntries(user.getUsername(), accountType).add(entry);
@@ -74,27 +108,34 @@ public class PasswordManager implements Serializable {
         return true;
     }
 
-    public boolean updateEntry(UserAccount user, String accountType, int index, PasswordEntry updatedEntry) {
+    public boolean updateEntry(UserAccount user, String accountType, PasswordEntry originalEntry, PasswordEntry updatedEntry) {
         if (user == null || accountType == null || updatedEntry == null) {
             return false;
         }
 
-        if ("Business".equalsIgnoreCase(accountType) && !canModifyBusinessVault(user)) {
+        if ("Business".equalsIgnoreCase(accountType)) {
+            if (!canModifyBusinessVault(user)) {
             return false;
+            }
+            if (updatedEntry.getBusinessGroup() == null || updatedEntry.getBusinessGroup().trim().isEmpty()) {
+                return false;
+            }
         }
 
         List<PasswordEntry> list = getVaultEntries(user.getUsername(), accountType);
-        if (index >= 0 && index < list.size()) {
-            list.set(index, updatedEntry);
-            saveToFile();
-            return true;
+        int index = list.indexOf(originalEntry);
+        if (index == -1) {
+            return false;
         }
 
-        return false;
+        list.set(index, updatedEntry);
+        saveToFile();
+        return true;
+
     }
 
-    public boolean removeEntry(UserAccount user, String accountType, int index) {
-        if (user == null || accountType == null) {
+    public boolean removeEntry(UserAccount user, String accountType, PasswordEntry entryToRemove) {
+        if (user == null || accountType == null || entryToRemove == null) {
             return false;
         }
 
@@ -103,13 +144,11 @@ public class PasswordManager implements Serializable {
         }
 
         List<PasswordEntry> list = getVaultEntries(user.getUsername(), accountType);
-        if (index >= 0 && index < list.size()) {
-            list.remove(index);
+        boolean removed = list.remove(entryToRemove);
+        if (removed) {
             saveToFile();
-            return true;
         }
-
-        return false;
+            return removed;
     }
 
     public List<PasswordEntry> getRawEntriesForVault(String username, String accountType) {

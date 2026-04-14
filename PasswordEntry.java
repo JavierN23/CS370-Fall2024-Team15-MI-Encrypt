@@ -3,7 +3,8 @@ import java.io.Serializable;
 public class PasswordEntry implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    
+    private String id;
+    private String vaultId;
     private String site;
     private String username;
     private String encryptedPassword;
@@ -18,6 +19,14 @@ public class PasswordEntry implements Serializable {
         this.username = username;
         this.encryptedPassword = EncryptionService.encryptCTR(plainPassword);
         this.businessGroup = businessGroup;
+    }
+    
+    public String getId() {
+        return id;
+    }
+
+    public String getVaultId() {
+        return vaultId;
     }
 
     public String getSite(){
@@ -38,6 +47,14 @@ public class PasswordEntry implements Serializable {
         return businessGroup;
     }
 
+    public boolean isBusinessEntry() {
+        return "BUSINESS_SHARED".equals(vaultId);
+    }
+
+    public void setVaultId(String vaultId) {
+        this.vaultId = vaultId;
+    }
+
     public void setSite(String site) {
         this.site = site;
     }
@@ -51,7 +68,11 @@ public class PasswordEntry implements Serializable {
     }
 
     public void setBusinessGroup(String businessGroup) {
-        this.businessGroup = businessGroup;
+        if (businessGroup == null || businessGroup.trim().isEmpty()) {
+            this.businessGroup = null;
+        } else {
+            this.businessGroup = businessGroup.trim();
+        }
     }
 
     @Override

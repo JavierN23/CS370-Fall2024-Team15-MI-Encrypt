@@ -4,6 +4,7 @@ import javax.swing.*;
 public class SignUpPanel extends JPanel {
     private final AppFrame app;
     private final Credentials creds;
+    private final InviteCodeManager inviteCodeManager;
 
     private final JTextField user = new JTextField(24);
     private final JPasswordField pass = new JPasswordField(24);
@@ -11,16 +12,20 @@ public class SignUpPanel extends JPanel {
     private final JCheckBox twoFactor = new JCheckBox("Enable Two-Factor Authentication");
 
     private final JComboBox<String> accountType = new JComboBox<>(new String[] {"Personal", "Business", "Both"});
+    private final JTextField inviteCode = new JTextField(24);
+    private final JLabel inviteHelp = UI.subtle("For Business or Both accounts, enter your invite code to receive business access.");
 
     public SignUpPanel(AppFrame app, Credentials creds) {
         this.app = app;
         this.creds = creds;
+        this.inviteCodeManager = InviteCodeManager.loadFromFile();
 
         UI.styleInput(user);
         UI.styleInput(pass);
         UI.styleInput(email);
         UI.styleInput(accountType);
-        
+        UI.styleInput(inviteCode);
+
         setLayout(new BorderLayout());
 
         JPanel page = new JPanel(new GridBagLayout());
@@ -40,14 +45,6 @@ public class SignUpPanel extends JPanel {
 
         UI.space(card, 24);
 
-        JLabel usernameLabel = UI.label("Username");
-        JLabel passwordLabel = UI.label("Password");
-        JLabel emailLabel = UI.label("Email");
-
-        Dimension labelSize = new Dimension(100, usernameLabel.getPreferredSize().height);
-        usernameLabel.setPreferredSize(labelSize);
-        passwordLabel.setPreferredSize(labelSize);
-        emailLabel.setPreferredSize(labelSize);
 
         card.add(UI.row("Username", user));
         UI.space(card, 14);
@@ -59,6 +56,13 @@ public class SignUpPanel extends JPanel {
         UI.space(card, 14);
 
         card.add(UI.row("Account Type", accountType));
+        UI.space(card, 14);
+
+        card.add(UI.row("Invite Code", inviteCode));
+        UI.space(card, 6);
+
+        inviteHelp.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(inviteHelp);
         UI.space(card, 14);
 
         twoFactor.setOpaque(false);
@@ -91,14 +95,31 @@ public class SignUpPanel extends JPanel {
         signUpBtn.addActionListener(e -> doSignUp());
         back.addActionListener(e -> app.showLogin());
         reset.addActionListener(e -> clear());
+
+        accountType.addActionListener(e -> updateInviteControls());
+        updateInviteControls();
     }
 
     public void clear() {
         user.setText("");
         pass.setText("");
         email.setText("");
+        inviteCode.setText("");
         accountType.setSelectedIndex(0);
         twoFactor.setSelected(false);
+        updateInviteControls();
+    }
+
+    private void updateInviteControls() {
+        String type = ((String) accountType.getSelectedItem()).toLowerCase();
+        boolean businessType = "business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type);
+
+        inviteCode.setEnabled(businessType);
+        inviteHelp.setEnabled(businessType);
+
+        if (!businessType) {
+            inviteCode.setText("");
+        }
     }
 
     // Sign up: validate input, create account, and show messages
@@ -109,15 +130,27 @@ public class SignUpPanel extends JPanel {
         String e = email.getText().trim();
         boolean tfa = twoFactor.isSelected();
         String type = ((String) accountType.getSelectedItem()).toLowerCase();
+        String code = inviteCode.getText().trim();
 
         if (u.isEmpty() || p.isEmpty() || e.isEmpty()) {
             JOptionPane.showMessageDialog(this, "All fields are required.");
             return;
         }
 
-        boolean created = creds.signUp(u, p, e, type, tfa);
+        boolean created;
+        
+        if (("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) && !code.isEmpty()) {
+            created = creds.signUp(u, p, e, type, tfa, code, inviteCodeManager);
+        } else {
+            created = creds.signUp(u, p, e, type, tfa, "", inviteCodeManager);
+        }
+
         if (!created) {
-            JOptionPane.showMessageDialog(this, "Username already exists or account type is invalid.");
+            if (("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) && !code.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Failed to create account. The invite code may be invalid or already used.");
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to create account. The username may already be taken.");
+            }
             return;
         }
 
@@ -136,10 +169,24 @@ public class SignUpPanel extends JPanel {
                 return;
             }
 
-            JOptionPane.showMessageDialog(this, "Account created. Set up your authenticator app to finish enabling 2FA.");
+            if (account.isBusinessAuthorized()) {
+                JOptionPane.showMessageDialog(this, "Account created with Business access. Set up your authenticator app to finish enabling 2FA.");
+            } else if ("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) {
+                JOptionPane.showMessageDialog(this, "Account created with Business access. Set up your authenticator app to finish enabling 2FA.");
+            } else {
+                JOptionPane.showMessageDialog(this, "Account created successfully! Set up your authenticator app to finish enabling 2FA.");
+            }
+
             app.showTwoFactorSetup(u, secret);
         } else {
-            JOptionPane.showMessageDialog(this, "Account created successfully! You can now log in.");
+            if (account.isBusinessAuthorized()) {
+                JOptionPane.showMessageDialog(this, "Account created successfully and business access was assigned.");
+            } else if ("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) {
+                JOptionPane.showMessageDialog(this, "Account created successfully. Business access will remain unavailable until an admin grants access or you use a valid invite code.");
+            } else {
+                JOptionPane.showMessageDialog(this, "Account created successfully! You can now log in.");
+            }
+
             app.showLogin();
         }
     }

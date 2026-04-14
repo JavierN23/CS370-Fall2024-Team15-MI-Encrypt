@@ -30,7 +30,7 @@ public class UserAccount implements Serializable {
         this.locked = false;
 
         this.businessAuthorized = false;
-        this.businessRole = "employee";
+        this.businessRole = "none";
         this.allowedBusinessGroups = new ArrayList<>();
     }
 
@@ -70,6 +70,10 @@ public class UserAccount implements Serializable {
         return businessAuthorized;
     }
 
+    public boolean hasBusinessAccess() {
+        return businessAuthorized;
+    }
+
     public String getBusinessRole() {
         return businessRole;
     }
@@ -79,7 +83,7 @@ public class UserAccount implements Serializable {
     }
 
     public boolean isBusinessAdmin() {
-        return "admin".equalsIgnoreCase(businessRole);
+        return businessAuthorized && "admin".equalsIgnoreCase(businessRole);
     }
 
     public boolean isBusinessEmployee() {
@@ -90,7 +94,13 @@ public class UserAccount implements Serializable {
         if (group == null || allowedBusinessGroups == null) {
             return false;
         }
-        return allowedBusinessGroups.contains(group);
+
+        for (String g : allowedBusinessGroups) {
+            if (g != null && g.equalsIgnoreCase(group)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void setPassword(String password) {
@@ -123,32 +133,56 @@ public class UserAccount implements Serializable {
 
     public void setBusinessAuthorized(boolean businessAuthorized) {
         this.businessAuthorized = businessAuthorized;
+
+        if (!businessAuthorized) {
+            this.businessRole = "none";
+            this.allowedBusinessGroups = new ArrayList<>();
+        }
     }
 
     public void setBusinessRole(String businessRole) {
-        this.businessRole = businessRole;
+        if (businessRole == null) {
+            this.businessRole = "none";
+            return;
+        }
+
+        String normalized = businessRole.trim().toLowerCase();
+        if (!normalized.equals("admin") && !normalized.equals("employee") && !normalized.equals("none")) {
+            normalized = "none"; // Default to "none" if an invalid role is provided
+        }
+        this.businessRole = normalized;
     }
 
     public void setAllowedBusinessGroups(List<String> allowedBusinessGroups) {
+        this.allowedBusinessGroups = new ArrayList<>();
+
         if (allowedBusinessGroups == null) {
-            this.allowedBusinessGroups = new ArrayList<>();
-        } else {
-            this.allowedBusinessGroups = new ArrayList<>(allowedBusinessGroups);
+            return;
+        } 
+        for (String group : allowedBusinessGroups) {
+            addBusinessGroup(group);
         }
     }
 
     public void addBusinessGroup(String group) {
-        if (group != null && !allowedBusinessGroups.contains(group)) {
-            allowedBusinessGroups.add(group);
+        if (group == null || group.trim().isEmpty()) {
+            return; // Ignore null or empty group names
+        }
+        
+        String normalized = group.trim();
+        if (!hasBusinessGroup(normalized)) {
+            allowedBusinessGroups.add(normalized);
         }
     }
 
     public void removeBusinessGroup(String group) {
-        if (group != null) {
-            allowedBusinessGroups.remove(group);
+        if (group == null) {
+            return; // Ignore null or empty group names
         }
+
+        allowedBusinessGroups.removeIf(g -> g != null && g.equalsIgnoreCase(group));
     }
-    
+
     public void grantBusinessEmployeeAccess(List<String> groups) {
         this.businessAuthorized = true;
         this.businessRole = "employee";
@@ -163,7 +197,7 @@ public class UserAccount implements Serializable {
 
     public void revokeBusinessAccess() {
         this.businessAuthorized = false;
-        this.businessRole = "employee";
+        this.businessRole = "none";
         this.allowedBusinessGroups = new ArrayList<>();
     }
 }

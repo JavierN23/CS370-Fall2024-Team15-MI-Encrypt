@@ -204,19 +204,16 @@ public class VaultPanel extends JPanel {
         }
 
         if ("Business".equalsIgnoreCase(accountType)) {
-            String role = account.getBusinessRole();
-            if (role == null || role.trim().isEmpty()) {
-                role = "employee";
-            }
-            title.setText("Business Vault — " + role + " — " + username);
-
             if (!account.isBusinessAuthorized()) {
+                title.setText("Business Vault — " + username);
                 accessStatus.setText("Business Access Pending. Please contact your administrator.");
                 accessStatus.setVisible(true);
             } else if (account.isBusinessAdmin()) {
+                title.setText("Business Vault — " + username);
                 accessStatus.setText("Full business vault access.");
                 accessStatus.setVisible(true);
             } else {
+                title.setText("Business Vault — employee — " + username);
                 accessStatus.setText("Read-only access to authorized business groups.");
                 accessStatus.setVisible(true);
             }
@@ -425,20 +422,32 @@ public class VaultPanel extends JPanel {
             return;
         }
 
+        UserAccount account = creds.getAccount(user);
+        if (account == null) {
+            JOptionPane.showMessageDialog(this, "User account not found.");
+            return;
+        }
+
+        String decryptedPassword = pm.getDecryptedPassword(account, type, sel);
+        if (decryptedPassword == null) {
+            JOptionPane.showMessageDialog(this, "You don't have permission to view this entry.");
+            return;
+        }
+
         JLabel site = new JLabel("Site: " + sel.getSite());
         site.setForeground(UI.TEXT);
 
         JLabel usr = new JLabel("Username: " + sel.getUsername());
         usr.setForeground(UI.TEXT);
 
-        JLabel pwd = new JLabel("Password: " + mask(sel.getPassword()));
+        JLabel pwd = new JLabel("Password: " + mask(decryptedPassword));
         pwd.setForeground(UI.TEXT);
 
         JCheckBox show = new JCheckBox("Show password");
         show.setOpaque(false);
         show.setForeground(UI.MUTED);
         show.addActionListener(e ->
-                pwd.setText("Password: " + (show.isSelected() ? sel.getPassword() : mask(sel.getPassword())))
+                pwd.setText("Password: " + (show.isSelected() ? decryptedPassword : mask(decryptedPassword)))
         );
 
         JPanel panel = new JPanel();
@@ -526,17 +535,18 @@ public class VaultPanel extends JPanel {
             return;
         }
 
-        List<PasswordEntry> full = pm.getRawEntriesForVault(user, type);
-        int realIndex = full.indexOf(sel);
-
-        if (realIndex < 0) {
-            JOptionPane.showMessageDialog(this, "Error updating entry.");
-            return;
+        String finalPassword;
+        if (pw.isEmpty()) {
+            finalPassword = pm.getDecryptedPassword(account, type, sel);
+            if (finalPassword == null) {
+                JOptionPane.showMessageDialog(this, "You don't have permission to view this entry.");
+                return;
+            }
+        } else {
+            finalPassword = pw;
         }
 
-        String finalPassword = pw.isEmpty() ? sel.getPassword() : pw;
         PasswordEntry updated;
-
         if ("Business".equalsIgnoreCase(type)) {
             String group = groupField.getText().trim();
             if (group.isEmpty()) {
@@ -549,7 +559,7 @@ public class VaultPanel extends JPanel {
             updated = new PasswordEntry(s, un, finalPassword);
         }
 
-        boolean success = pm.updateEntry(account, type, realIndex, updated);
+        boolean success = pm.updateEntry(account, type, sel, updated);
         if (!success) {
             JOptionPane.showMessageDialog(this, "Error updating entry.");
             return;
@@ -591,7 +601,7 @@ public class VaultPanel extends JPanel {
             return;
         }
 
-        boolean removed = pm.removeEntry(account, type, realIndex);
+        boolean removed = pm.removeEntry(account, type, sel);
         if (!removed) {
             JOptionPane.showMessageDialog(this, "Error deleting entry.");
             return;
@@ -619,18 +629,25 @@ public class VaultPanel extends JPanel {
 
     // Copy password to clipboard
     private void copySelectedPassword() {
-        if ("Business".equalsIgnoreCase(type) && !canViewBusinessVault()) {
-            JOptionPane.showMessageDialog(this, "You don't have permission to view business entries.");
-            return;
-        }
-
         PasswordEntry sel = list.getSelectedValue();
         if (sel == null) {
             JOptionPane.showMessageDialog(this, "Select an entry first.");
             return;
         }
-        
-        copyToClipboard(sel.getPassword());
+
+        UserAccount account = creds.getAccount(user);
+        if (account == null) {
+            JOptionPane.showMessageDialog(this, "User account not found.");
+            return;
+        }
+
+        String decryptedPassword = pm.getDecryptedPassword(account, type, sel);
+        if (decryptedPassword == null) {
+            JOptionPane.showMessageDialog(this, "You don't have permission to view this entry.");
+            return;
+        }
+
+        copyToClipboard(decryptedPassword);
         JOptionPane.showMessageDialog(this, "Password copied.");
     }
 
@@ -693,7 +710,9 @@ public class VaultPanel extends JPanel {
 
     // Mask a password
     private String mask(String s) {
-        if (s == null) return "";
+        if (s == null){
+            return "";
+        }
         int n = Math.max(6, Math.min(12, s.length()));
         return "•".repeat(n);
     }

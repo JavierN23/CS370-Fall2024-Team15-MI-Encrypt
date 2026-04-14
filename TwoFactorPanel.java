@@ -96,7 +96,6 @@ public class TwoFactorPanel extends JPanel {
         UserAccount account = creds.getAccount(pendingUsername);
         if (account == null || account.getTotpSecret() == null) {
             // Shouldn't happen, but fall back gracefully
-            SessionManager.startSession(pendingUsername);
             app.setCurrentUser(pendingUsername);
             JOptionPane.showMessageDialog(this, "Login successful!");
             app.showChoice();

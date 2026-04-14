@@ -170,4 +170,8 @@ public class UI {
     public static File passwordsFile() {
         return new File(dataDir(), "passwords.dat");
     }
+
+    public static File inviteCodesFile() {
+        return new File(dataDir(), "invitecodes.dat");
+    }
 }

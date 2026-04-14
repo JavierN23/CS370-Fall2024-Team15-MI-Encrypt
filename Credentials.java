@@ -11,17 +11,33 @@ public class Credentials implements Serializable {
     private static final int MAX_LOGIN_ATTEMPTS = 3;
 
     // For Testing the Master Key functionality.
-    private static final String MASTER_KEY = "MIENCRYPT";
+    private static final String OWNER_BOOTSTRAP_CODE = "MIENCRYPT";
+
+    private void ensureAccountsInitialized() {
+        if (accounts == null) {
+            accounts = new HashMap<>();
+        }
+    }
 
     private boolean isValidAccountType(String type) {
         return type.equals("personal") || type.equals("business") || type.equals("both");
     }
 
-    public boolean signUp(String username, String password, String email, String accountType, boolean twoFactorEnabled) {
-        username = username.trim();
-        password = password.trim();
-        email = email.trim();
-        accountType = accountType.trim().toLowerCase();
+    private boolean isBusinessType(UserAccount account) {
+        return account != null
+                && (account.getAccountType().equalsIgnoreCase("business") 
+                || account.getAccountType().equalsIgnoreCase("both"));
+    }
+
+    public boolean signUp(String username, String password, String email, String accountType, boolean twoFactorEnabled, String inviteCode, InviteCodeManager inviteCodeManager) {
+
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        password = password == null ? "" : password.trim();
+        email = email == null ? "" : email.trim();
+        accountType = accountType == null ? "" : accountType.trim().toLowerCase();
+        inviteCode = inviteCode == null ? "" : inviteCode.trim();
 
 
         if (username.isEmpty() || password.isEmpty() || email.isEmpty() || accountType.isEmpty()) {
@@ -37,12 +53,19 @@ public class Credentials implements Serializable {
         }
         
         UserAccount account = new UserAccount(username, password, email, accountType, twoFactorEnabled);
+
         if (twoFactorEnabled) {
             account.setTotpSecret(TOTPUtil.generateSecret());
         }
-        account.setBusinessAuthorized(false);
-        account.setBusinessRole("employee");
-        account.setAllowedBusinessGroups(new ArrayList<>());
+
+        account.revokeBusinessAccess();
+
+        if ((accountType.equals("business") || accountType.equals("both")) 
+                && !inviteCode.isEmpty()) {
+            if (inviteCodeManager == null || !inviteCodeManager.redeemCode(inviteCode, account)) {
+                return false; // Invalid invite code
+            }
+        }
 
         accounts.put(username, account);
         saveToFile();
@@ -50,8 +73,10 @@ public class Credentials implements Serializable {
     }
 
     public boolean login(String username, String password) {
-        username = username.trim();
-        password = password.trim();
+        ensureAccountsInitialized();
+        
+        username = username == null ? "" : username.trim();
+        password = password == null ? "" : password.trim();
 
         UserAccount account = accounts.get(username);
 
@@ -81,7 +106,10 @@ public class Credentials implements Serializable {
     }
 
     public int getRemainingAttempts(String username) {
-        UserAccount account = accounts.get(username.trim());
+        ensureAccountsInitialized();
+        
+        username = username == null ? "" : username.trim();
+        UserAccount account = accounts.get(username);
         if (account == null) {
             return 0;
         }
@@ -90,12 +118,18 @@ public class Credentials implements Serializable {
     }
 
     public boolean isLocked(String username) {
-        UserAccount account = accounts.get(username.trim());
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        UserAccount account = accounts.get(username);
         return account != null && account.isLocked();
     }
 
     public boolean unlockAccount(String username) {
-        UserAccount account = accounts.get(username.trim());
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        UserAccount account = accounts.get(username);
         if (account == null) {
             return false;
         }
@@ -107,9 +141,11 @@ public class Credentials implements Serializable {
     }
 
     public boolean changePassword(String username, String oldPassword, String newPassword) {
-        username = username.trim();
-        oldPassword = oldPassword.trim();
-        newPassword = newPassword.trim();
+        ensureAccountsInitialized();
+        
+        username = username == null ? "" : username.trim();
+        oldPassword = oldPassword == null ? "" : oldPassword.trim();
+        newPassword = newPassword == null ? "" : newPassword.trim();
 
         UserAccount account = accounts.get(username);
         if (account == null) {
@@ -130,9 +166,11 @@ public class Credentials implements Serializable {
     }
 
     public boolean updateAccountInfo(String username, String newEmail, String newAccountType, boolean twoFactorEnabled) {
-        username = username.trim();
-        newEmail = newEmail.trim();
-        newAccountType = newAccountType.trim().toLowerCase();
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        newEmail = newEmail == null ? "" : newEmail.trim();
+        newAccountType = newAccountType == null ? "" : newAccountType.trim().toLowerCase();
 
         UserAccount account = accounts.get(username);
         if (account == null) {
@@ -153,10 +191,8 @@ public class Credentials implements Serializable {
             account.setTotpSecret(TOTPUtil.generateSecret());
         }
 
-        if (newAccountType.equals("personal")) {
-            account.setBusinessAuthorized(false);
-            account.setBusinessRole("employee");
-            account.setAllowedBusinessGroups(new ArrayList<>());
+        if ("personal".equals(newAccountType)) {
+            account.revokeBusinessAccess();
         }
 
         saveToFile();
@@ -164,7 +200,9 @@ public class Credentials implements Serializable {
     }
 
     public boolean deleteAccount(String username) {
-        username = username.trim();
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
 
         if (accounts.remove(username) != null) {
             saveToFile();
@@ -174,14 +212,21 @@ public class Credentials implements Serializable {
     }
 
     public UserAccount getAccount(String username) {
-        if (username == null) {
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        if (username.isEmpty()) {
             return null;
         }
-        return accounts.get(username.trim());
+        return accounts.get(username);
     }
 
     public boolean setBusinessAccess(String username, boolean authorized) {
-        UserAccount account = accounts.get(username.trim());
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        ensureAccountsInitialized();
+        UserAccount account = accounts.get(username);
         if (account == null){
             return false;
         }
@@ -190,18 +235,27 @@ public class Credentials implements Serializable {
             return false; // Not a business account
         }
 
-        account.setBusinessAuthorized(authorized);
-
         if (!authorized) {
-            account.setBusinessRole("employee");
-            account.setAllowedBusinessGroups(new ArrayList<>());
+            account.revokeBusinessAccess();
+        } else {
+            account.setBusinessAuthorized(true);
+
+            if ("none".equalsIgnoreCase(account.getBusinessRole())) {
+                account.setBusinessRole("employee");
+            }
         }
+
         saveToFile();
         return true;
     }
 
     public boolean setBusinessRole(String username, String role) {
-        UserAccount account = accounts.get(username.trim());
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        role = role == null ? "" : role.trim().toLowerCase();
+
+        UserAccount account = accounts.get(username);
         if (account == null){
             return false;
         }
@@ -210,21 +264,17 @@ public class Credentials implements Serializable {
             return false; // Not a business account
         }
 
-        if (role == null) {
-            return false;
-        }
-
-        role = role.trim().toLowerCase();
-
-        if (!role.equals("employee") && !role.equals("admin")) {
+        if (!role.equals("employee") && !role.equals("admin") && !role.equals("none")) {
             return false; // Invalid role
         }
 
-        account.setBusinessRole(role);
-
-        if (role.equals("admin")) {
+        if ("none".equals(role)) {
+            account.revokeBusinessAccess();
+        } else if ("admin".equals(role)) {
+            account.grantBusinessAdminAccess();
+        } else {
             account.setBusinessAuthorized(true);
-            account.setAllowedBusinessGroups(new ArrayList<>());
+            account.setBusinessRole("employee");
         }
 
         saveToFile();
@@ -232,7 +282,10 @@ public class Credentials implements Serializable {
     }
 
     public boolean promoteToBusinessAdmin(String username) {
-        UserAccount account = accounts.get(username.trim());
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        UserAccount account = accounts.get(username);
         if (account == null){
             return false;
         }
@@ -241,17 +294,19 @@ public class Credentials implements Serializable {
             return false; // Not a business account
     }
 
-    account.setBusinessRole("admin");
-    account.setBusinessAuthorized(true);
-    account.setAllowedBusinessGroups(new ArrayList<>());
-
+    account.grantBusinessAdminAccess();
     saveToFile();
     return true;
-}
+    }
 
     public boolean addBusinessGroup(String username, String group) {
-        UserAccount account = accounts.get(username.trim());
-        if (account == null || group == null || group.trim().isEmpty()){
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        group = group == null ? "" : group.trim();
+
+        UserAccount account = accounts.get(username);
+        if (account == null || group.isEmpty()){
             return false;
         }
 
@@ -259,24 +314,41 @@ public class Credentials implements Serializable {
             return false; // Not a business account
         }
 
-        account.addBusinessGroup(group.trim());
+        if (!account.isBusinessAuthorized()) {
+            return false; // User doesn't have business access
+        }
+
+        account.addBusinessGroup(group);
         saveToFile();
         return true;
     }
 
     public boolean removeBusinessGroup(String username, String group) {
-        UserAccount account = accounts.get(username.trim());
-        if (account == null || group == null || group.trim().isEmpty()){
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        group = group == null ? "" : group.trim();
+
+        UserAccount account = accounts.get(username);
+        if (account == null || group.isEmpty()) {
             return false;
         }
 
-        account.removeBusinessGroup(group.trim());
+        if (!isBusinessType(account)) {
+            return false; // Not a business account
+        }
+
+        account.removeBusinessGroup(group);
         saveToFile();
         return true;
     }
 
     public List<String> getBusinessGroups(String username) {
-        UserAccount account = accounts.get(username.trim());
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        UserAccount account = accounts.get(username);
+        
         if (account == null){
             return new ArrayList<>();
         }
@@ -285,7 +357,11 @@ public class Credentials implements Serializable {
     }
 
     public boolean clearBusinessGroups(String username) {
-        UserAccount account = accounts.get(username.trim());
+        ensureAccountsInitialized();
+
+        username = username == null ? "" : username.trim();
+        UserAccount account = accounts.get(username);
+        
         if (account == null){
             return false;
         }
@@ -296,36 +372,41 @@ public class Credentials implements Serializable {
     }
 
     public boolean isBusinessAuthorized(String username) {
-        UserAccount account = accounts.get(username.trim());
+        ensureAccountsInitialized();
+        
+        username = username == null ? "" : username.trim();
+        UserAccount account = accounts.get(username);
         return account != null && account.isBusinessAuthorized();
     }
 
     public boolean isBusinessAdmin(String username) {
-        UserAccount account = accounts.get(username.trim());
+        ensureAccountsInitialized();
+        username = username == null ? "" : username.trim();
+        UserAccount account = accounts.get(username);
         return account != null && account.isBusinessAdmin();
     }
 
-    private boolean isBusinessType(UserAccount account) {
-        return account.getAccountType().equalsIgnoreCase("business") ||
-               account.getAccountType().equalsIgnoreCase("both");
-    }
-
     public List<UserAccount> getAllAccounts() {
+        ensureAccountsInitialized();
         return new ArrayList<>(accounts.values());
     }
 
     public boolean hasAnyBusinessAdmin() {
+        ensureAccountsInitialized();
         for (UserAccount account : accounts.values()) {
             if (account != null && isBusinessType(account) && account.isBusinessAdmin()) {
                 return true;
             }
         }
-
         return false;
     }
 
-    public boolean claimInitialBusinessAdmin(String username, String password) {
-        UserAccount account = accounts.get(username.trim());
+    public boolean claimInitialBusinessAdmin(String username, String bootstrapCode) {
+        ensureAccountsInitialized();
+        username = username == null ? "" : username.trim();
+        bootstrapCode = bootstrapCode == null ? "" : bootstrapCode.trim();
+
+        UserAccount account = accounts.get(username);
         if (account == null) {
             return false;
         }
@@ -338,14 +419,11 @@ public class Credentials implements Serializable {
             return false; // Admin already exists
         }
 
-        if (password == null || !MASTER_KEY.equals(password.trim())) {
+        if (!OWNER_BOOTSTRAP_CODE.equals(bootstrapCode)) {
             return false; // Invalid master key
         }
 
-        account.setBusinessAuthorized(true);
-        account.setBusinessRole("admin");
-        account.setAllowedBusinessGroups(new ArrayList<>());
-
+        account.grantBusinessAdminAccess();
         saveToFile();
         return true;
 
@@ -353,8 +431,9 @@ public class Credentials implements Serializable {
 
     // Save credentials to file
     public void saveToFile() {
-        try (ObjectOutputStream oos =
-                     new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
+        ensureAccountsInitialized();
+
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(UI.usersFile()))) {
             oos.writeObject(this);
         } catch (IOException e) {
             System.out.println("Error saving user data: " + e.getMessage());
@@ -363,20 +442,19 @@ public class Credentials implements Serializable {
 
     // Load credentials from file
     public static Credentials loadFromFile() {
-        File file = new File(FILE_NAME);
+        File file = UI.usersFile();
         if (!file.exists() || file.length() == 0) {
             return new Credentials();
         }
             
 
-        try (ObjectInputStream ois =
-                     new ObjectInputStream(new FileInputStream(FILE_NAME))) {
-
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
             Object obj = ois.readObject();
             if (obj instanceof Credentials) {
-                return (Credentials) obj;
+                Credentials creds = (Credentials) obj;
+                creds.ensureAccountsInitialized();
+                return creds;
             }
-
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("Error loading user data: " + e.getMessage());
         }
