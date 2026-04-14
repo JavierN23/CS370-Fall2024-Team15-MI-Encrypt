@@ -55,6 +55,21 @@ public class AppFrame extends JFrame {
         // Default to login page
         setContentPane(cards);
         showLogin();
+
+        Toolkit.getDefaultToolkit().addAWTEventListener(event -> {
+            SessionManager.updateActivity();
+        }, AWTEvent.KEY_EVENT_MASK | AWTEvent.MOUSE_EVENT_MASK);
+
+      
+        new javax.swing.Timer(5000, e -> {
+            if (SessionManager.isLoggedIn() && SessionManager.isExpired()) {
+                SessionManager.endSession();
+                JOptionPane.showMessageDialog(this,
+                        "Session expired due to inactivity. Please log in again.");
+                showLogin();
+            }
+        }).start();
+        
         setVisible(true);
         
     }
