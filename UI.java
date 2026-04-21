@@ -155,6 +155,36 @@ public class UI {
         return c;
     }
 
+    public static void applyGlobalStyle() {
+        UIManager.put("Panel.background", BG);
+        UIManager.put("OptionPane.background", BG);
+        UIManager.put("OptionPane.messageForeground", TEXT);
+        UIManager.put("Label.foregroud", TEXT);
+
+        // Buttons inside Dialog
+
+        UIManager.put("OptionPane.buttonBackground", SECONDARYACCENT);
+        UIManager.put("OptionPane.ButtonForeground", TEXT);
+
+        UIManager.put("Button.background", SECONDARYACCENT);
+        UIManager.put("Button.foreground", TEXT);
+
+        UIManager.put("TextField.background", new Color(34, 34, 40));
+        UIManager.put("TextField.foreground", TEXT);
+        UIManager.put("TextField.caretForeground", TEXT);
+
+        // Tabs
+        UIManager.put("TabbedPane.background", CARD);
+        UIManager.put("TabbedPane.foreground", TEXT);
+        UIManager.put("TabbedPane.contentAreaColor", CARD);
+
+        UIManager.put("ScrollPane.background", CARD);
+        UIManager.put("Viewport.background", CARD);
+
+        UIManager.put("SplitPane.background", BG);
+        UIManager.put("SplitPaneDivider.background", BORDER);
+    }
+
     public static File dataDir() {
         File dir = new File(System.getProperty("user.home"), ".MI-Encrypt");
         if (!dir.exists()) {
