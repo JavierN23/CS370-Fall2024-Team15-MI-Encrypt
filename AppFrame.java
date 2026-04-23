@@ -72,8 +72,10 @@ public class AppFrame extends JFrame {
             System.out.println("Not Found");
         }
     }
+    
     public void setCurrentUser(String username) {
         this.currentUser = username;
+        SessionManager.startSession(username);
     }
 
     public String getCurrentUser() {
