@@ -9,6 +9,7 @@ public class VaultPanel extends JPanel {
     private final AppFrame app;
     private final PasswordManager pm;
     private final Credentials creds;
+    private final CreditCardManager ccm;
 
     private String user;
     private String type;
@@ -25,12 +26,13 @@ public class VaultPanel extends JPanel {
     private final JList<PasswordEntry> list = new JList<>(model);
 
     // Buttons
-    private final JButton add = UI.accentButton("Add");
-    private final JButton view = UI.secondaryButton("View");
-    private final JButton edit = UI.secondaryButton("Edit");
-    private final JButton del = UI.deleteButton("Delete");
-    private final JButton copyUser = UI.secondaryButton("Copy Username");
-    private final JButton copyPass = UI.secondaryButton("Copy Password");
+    private final JButton add        = UI.accentButton("Add");
+    private final JButton creditCardsBtn = UI.secondaryButton("Credit Cards");
+    private final JButton view       = UI.secondaryButton("View");
+    private final JButton edit       = UI.secondaryButton("Edit");
+    private final JButton del        = UI.deleteButton("Delete");
+    private final JButton copyUser   = UI.secondaryButton("Copy Username");
+    private final JButton copyPass   = UI.secondaryButton("Copy Password");
     private final JButton generateBtn = UI.secondaryButton("Generate Password");
 
     // Scaling
@@ -39,11 +41,12 @@ public class VaultPanel extends JPanel {
 
     private final EntryRenderer renderer = new EntryRenderer();
 
-    public VaultPanel(AppFrame app, PasswordManager pm, Credentials creds) {
+    public VaultPanel(AppFrame app, PasswordManager pm, Credentials creds,
+                      CreditCardManager ccm) {
         this.app = app;
         this.pm = pm;
         this.creds = creds;
-
+        this.ccm = ccm;
 
         // Use BorderLayout page so CENTER grows when maximized
         JPanel page = UI.pageBorder();
@@ -122,6 +125,8 @@ public class VaultPanel extends JPanel {
         buttons.setOpaque(false);
 
         buttons.add(add);
+        creditCardsBtn.setBackground(new Color(160, 120, 220));
+        buttons.add(creditCardsBtn);
         buttons.add(view);
         buttons.add(edit);
         buttons.add(del);
@@ -148,7 +153,8 @@ public class VaultPanel extends JPanel {
 
         copyUser.addActionListener(e -> copySelectedUsername());
         copyPass.addActionListener(e -> copySelectedPassword());
-        generateBtn.addActionListener (e -> showGeneratedPasswordDialog());
+        generateBtn.addActionListener(e -> showGeneratedPasswordDialog());
+        creditCardsBtn.addActionListener(e -> showCreditCardsDialog());
 
         // Double click to view entry
         list.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -699,6 +705,258 @@ public class VaultPanel extends JPanel {
         closeBtn.addActionListener(e -> dialog.dispose());
 
         dialog.setVisible(true);
+    }
+
+    // Credit Card
+
+    private void showCreditCardsDialog() {
+        DefaultListModel<CreditCardEntry> cardModel = new DefaultListModel<>();
+        JList<CreditCardEntry> cardList = new JList<>(cardModel);
+
+        for (CreditCardEntry c : ccm.getCards(user)) {
+            cardModel.addElement(c);
+        }
+
+        cardList.setBackground(UI.CARD);
+        cardList.setForeground(UI.TEXT);
+        cardList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        cardList.setFixedCellHeight(62);
+        cardList.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        cardList.setCellRenderer(new ListCellRenderer<CreditCardEntry>() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<? extends CreditCardEntry> lst, CreditCardEntry val,
+                    int idx, boolean sel, boolean focus) {
+                JPanel p = new JPanel();
+                p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+                p.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
+                p.setOpaque(true);
+
+                JLabel nameL = new JLabel(val.getNickname() + "   [" + val.getCardType() + "]");
+                nameL.setFont(nameL.getFont().deriveFont(Font.BOLD, 14f));
+                nameL.setForeground(UI.TEXT);
+
+                JLabel numL = new JLabel(val.getMaskedCardNumber() + "   Exp: " + val.getExpiryDate());
+                numL.setFont(numL.getFont().deriveFont(Font.PLAIN, 12f));
+                numL.setForeground(UI.MUTED);
+
+                p.add(nameL);
+                p.add(Box.createVerticalStrut(2));
+                p.add(numL);
+                p.setBackground(sel ? new Color(60, 90, 130) : UI.CARD);
+                return p;
+            }
+        });
+
+        JScrollPane scroll = new JScrollPane(cardList);
+        scroll.setPreferredSize(new Dimension(520, 300));
+        scroll.getViewport().setBackground(UI.CARD);
+        scroll.setBorder(BorderFactory.createLineBorder(UI.BORDER, 1, true));
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+
+        JButton addCardBtn = UI.accentButton("Add Card");
+        addCardBtn.setBackground(new Color(130, 90, 220));
+        JButton viewCardBtn  = UI.secondaryButton("View Details");
+        JButton copyNumBtn   = UI.secondaryButton("Copy Number");
+        JButton delCardBtn   = UI.deleteButton("Delete");
+        JButton closeBtn     = UI.secondaryButton("Close");
+
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        btnRow.setOpaque(false);
+        btnRow.add(addCardBtn);
+        btnRow.add(viewCardBtn);
+        btnRow.add(copyNumBtn);
+        btnRow.add(delCardBtn);
+        btnRow.add(closeBtn);
+
+        JLabel header = new JLabel("Credit Cards");
+        header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
+        header.setForeground(UI.TEXT);
+
+        JLabel sub = UI.subtle(ccm.getCards(user).size() + " card(s) stored");
+
+        JPanel headerPanel = new JPanel();
+        headerPanel.setOpaque(false);
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        headerPanel.add(header);
+        headerPanel.add(Box.createVerticalStrut(4));
+        headerPanel.add(sub);
+        headerPanel.add(Box.createVerticalStrut(10));
+
+        JPanel content = new JPanel(new BorderLayout(10, 10));
+        content.setBackground(UI.BG);
+        content.setBorder(BorderFactory.createEmptyBorder(16, 16, 12, 16));
+        content.add(headerPanel, BorderLayout.NORTH);
+        content.add(scroll, BorderLayout.CENTER);
+        content.add(btnRow, BorderLayout.SOUTH);
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Credit Cards", true);
+        dialog.setContentPane(content);
+        dialog.setSize(560, 440);
+        dialog.setLocationRelativeTo(this);
+
+        addCardBtn.addActionListener(e -> {
+            addCreditCard(cardModel, sub, dialog);
+        });
+
+        viewCardBtn.addActionListener(e -> {
+            CreditCardEntry sel = cardList.getSelectedValue();
+            if (sel == null) { JOptionPane.showMessageDialog(dialog, "Select a card first."); return; }
+            viewCreditCardDetails(sel, dialog);
+        });
+
+        copyNumBtn.addActionListener(e -> {
+            CreditCardEntry sel = cardList.getSelectedValue();
+            if (sel == null) { JOptionPane.showMessageDialog(dialog, "Select a card first."); return; }
+            copyToClipboard(sel.getCardNumber());
+            JOptionPane.showMessageDialog(dialog, "Card number copied to clipboard.");
+        });
+
+        delCardBtn.addActionListener(e -> {
+            CreditCardEntry sel = cardList.getSelectedValue();
+            if (sel == null) { JOptionPane.showMessageDialog(dialog, "Select a card first."); return; }
+            int ok = JOptionPane.showConfirmDialog(dialog,
+                    "Delete \"" + sel.getNickname() + "\"?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+            if (ok == JOptionPane.YES_OPTION) {
+                ccm.removeCard(user, sel);
+                cardModel.removeElement(sel);
+                sub.setText(cardModel.getSize() + " card(s) stored");
+            }
+        });
+
+        closeBtn.addActionListener(e -> dialog.dispose());
+
+        dialog.setVisible(true);
+    }
+
+    // Dialog to enter and save a new credit card
+    private void addCreditCard(DefaultListModel<CreditCardEntry> model,
+                               JLabel countLabel, JDialog parent) {
+        JTextField nickname = new JTextField();
+        JTextField holderName = new JTextField();
+        JTextField cardNumber = new JTextField();
+        JTextField expiryDate = new JTextField();
+        JPasswordField cvv = new JPasswordField();
+        String[] types = {"Visa", "Mastercard", "American Express", "Discover", "Other"};
+        JComboBox<String> cardType = new JComboBox<>(types);
+
+        UI.styleInput(nickname);
+        UI.styleInput(holderName);
+        UI.styleInput(cardNumber);
+        UI.styleInput(expiryDate);
+        UI.styleInput(cvv);
+        UI.styleInput(cardType);
+
+        expiryDate.setToolTipText("Format: MM/YY (e.g. 09/27)");
+        cvv.setToolTipText("3 or 4 digit security code");
+
+        Object[] fields = {
+            "Nickname (e.g. Chase Debit):", nickname,
+            "Cardholder Name:", holderName,
+            "Card Number:", cardNumber,
+            "Expiry Date (MM/YY):", expiryDate,
+            "CVV:", cvv,
+            "Card Type:", cardType
+        };
+
+        int ok = JOptionPane.showConfirmDialog(parent, fields,
+                "Add Credit Card", JOptionPane.OK_CANCEL_OPTION);
+        if (ok != JOptionPane.OK_OPTION) return;
+
+        String nick = nickname.getText().trim();
+        String holder = holderName.getText().trim();
+        String num = cardNumber.getText().trim().replaceAll("[\\s-]", "");
+        String exp = expiryDate.getText().trim();
+        String cvvStr = new String(cvv.getPassword()).trim();
+        String type = (String) cardType.getSelectedItem();
+
+        if (nick.isEmpty() || holder.isEmpty() || num.isEmpty()
+                || exp.isEmpty() || cvvStr.isEmpty()) {
+            JOptionPane.showMessageDialog(parent, "All fields are required.");
+            return;
+        }
+        if (!num.matches("\\d{13,19}")) {
+            JOptionPane.showMessageDialog(parent, "Invalid card number. Enter 13-19 digits only.");
+            return;
+        }
+        if (!exp.matches("(0[1-9]|1[0-2])/\\d{2}")) {
+            JOptionPane.showMessageDialog(parent, "Invalid expiry. Use MM/YY format, e.g. 09/27.");
+            return;
+        }
+        if (!cvvStr.matches("\\d{3,4}")) {
+            JOptionPane.showMessageDialog(parent, "Invalid CVV. Must be 3 or 4 digits.");
+            return;
+        }
+
+        CreditCardEntry entry = new CreditCardEntry(nick, holder, num, exp, cvvStr, type);
+        ccm.addCard(user, entry);
+        model.addElement(entry);
+        countLabel.setText(model.getSize() + " card(s) stored");
+    }
+
+    // Dialog to view all details of a saved card (with reveal toggle)
+    private void viewCreditCardDetails(CreditCardEntry card, JDialog parent) {
+        JPanel panel = new JPanel();
+        panel.setBackground(UI.BG);
+        panel.setBorder(BorderFactory.createEmptyBorder(14, 14, 14, 14));
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        JLabel nickL   = new JLabel(card.getNickname() + "  [" + card.getCardType() + "]");
+        nickL.setFont(nickL.getFont().deriveFont(Font.BOLD, 16f));
+        nickL.setForeground(new Color(160, 120, 255));
+
+        JLabel holderL = new JLabel("Cardholder:  " + card.getCardholderName());
+        holderL.setForeground(UI.TEXT);
+
+        JLabel numL = new JLabel("Card Number:  " + card.getMaskedCardNumber());
+        numL.setForeground(UI.TEXT);
+
+        JLabel expL = new JLabel("Expires:  " + card.getExpiryDate());
+        expL.setForeground(UI.TEXT);
+
+        JLabel cvvL = new JLabel("CVV:  \u2022\u2022\u2022");
+        cvvL.setForeground(UI.TEXT);
+
+        JLabel dateL = new JLabel("Added:  " + card.getDateAdded());
+        dateL.setForeground(UI.MUTED);
+
+        JCheckBox revealBox = new JCheckBox("Reveal card number and CVV");
+        revealBox.setOpaque(false);
+        revealBox.setForeground(UI.MUTED);
+        revealBox.addActionListener(e -> {
+            if (revealBox.isSelected()) {
+                numL.setText("Card Number:  " + card.getCardNumber());
+                cvvL.setText("CVV:  " + card.getCVV());
+            } else {
+                numL.setText("Card Number:  " + card.getMaskedCardNumber());
+                cvvL.setText("CVV:  \u2022\u2022\u2022");
+            }
+        });
+
+        JButton copyNumBtn = UI.secondaryButton("Copy Number");
+        copyNumBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        copyNumBtn.addActionListener(e -> {
+            copyToClipboard(card.getCardNumber());
+            JOptionPane.showMessageDialog(parent, "Card number copied to clipboard.");
+        });
+
+        panel.add(nickL);
+        panel.add(Box.createVerticalStrut(12));
+        panel.add(holderL);
+        panel.add(Box.createVerticalStrut(6));
+        panel.add(numL);
+        panel.add(Box.createVerticalStrut(6));
+        panel.add(expL);
+        panel.add(Box.createVerticalStrut(6));
+        panel.add(cvvL);
+        panel.add(Box.createVerticalStrut(10));
+        panel.add(dateL);
+        panel.add(Box.createVerticalStrut(12));
+        panel.add(revealBox);
+        panel.add(Box.createVerticalStrut(10));
+        panel.add(copyNumBtn);
+
+        JOptionPane.showMessageDialog(parent, panel, "Card Details", JOptionPane.PLAIN_MESSAGE);
     }
 
     // Copy text to clipboard

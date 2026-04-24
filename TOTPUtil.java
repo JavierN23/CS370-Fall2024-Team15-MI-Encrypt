@@ -6,11 +6,6 @@ import java.security.SecureRandom;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-/**
- TOTPUtil - Time-based One Time Password
- No external libraries required, using only javax.crypto in the JDK
- Compatible with Google Authenticator, Authy, Microsoft Authenticator, etc.
- */
 public class TOTPUtil {
 
     private static final String BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";

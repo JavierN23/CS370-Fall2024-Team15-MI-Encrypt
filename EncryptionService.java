@@ -33,7 +33,6 @@ private static final SecretKeySpec KEY =
         }
     }
 
-
     public static String decryptCTR(String text) {
         try {
             byte[] input = Base64.getDecoder().decode(text);

@@ -7,7 +7,6 @@ import javax.swing.border.LineBorder;
 
 public class UI {
 
-
     public static final Color BG = new Color(16, 16, 20);
     public static final Color CARD = new Color(26, 26, 32);
     public static final Color BORDER = new Color(55, 55, 65);
@@ -203,5 +202,9 @@ public class UI {
 
     public static File inviteCodesFile() {
         return new File(dataDir(), "invitecodes.dat");
+    }
+
+    public static File creditCardsFile() {
+        return new File(dataDir(), "creditcards.dat");
     }
 }

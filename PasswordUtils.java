@@ -8,7 +8,6 @@ public class PasswordUtils {
 
         for (int i = array.length - 1; i > 0; i--) {
             int j = rand.nextInt(i + 1);
-
            
             char temp = array[i];
             array[i] = array[j];
@@ -42,7 +41,6 @@ public class PasswordUtils {
         for (int i = 4; i < 16; i++) {
             password[i] = allChars.charAt(rand.nextInt(allChars.length()));
         }
-
 
         shuffleArray(password);
 

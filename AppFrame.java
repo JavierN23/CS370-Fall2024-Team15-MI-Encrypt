@@ -4,6 +4,7 @@ import javax.swing.*;
 public class AppFrame extends JFrame {
     private final Credentials creds;
     private final PasswordManager pm;
+    private final CreditCardManager ccm;
 
     private final CardLayout layout = new CardLayout();
     private final JPanel cards = new JPanel(layout);
@@ -19,9 +20,11 @@ public class AppFrame extends JFrame {
 
     private String currentUser;
 
-    public AppFrame(Credentials creds, PasswordManager pm) {
+    public AppFrame(Credentials creds, PasswordManager pm,
+                    CreditCardManager ccm) {
         this.creds = creds;
         this.pm = pm;
+        this.ccm = ccm;
 
         // Project Title and frame settings
         setTitle("MI Encrypt");
@@ -36,7 +39,7 @@ public class AppFrame extends JFrame {
         login = new LoginPanel(this, creds);
         signUp = new SignUpPanel(this, creds);
         choice = new ChoicePanel(this, creds);
-        vault = new VaultPanel(this, pm, creds);
+        vault = new VaultPanel(this, pm, creds, ccm);
         account = new AccountPanel(this, creds);
         admin = new AdminPanel(this, creds, null);
         tfSetup = new TwoFactorSetupPanel(this, creds);
@@ -72,10 +75,8 @@ public class AppFrame extends JFrame {
             System.out.println("Not Found");
         }
     }
-    
     public void setCurrentUser(String username) {
         this.currentUser = username;
-        SessionManager.startSession(username);
     }
 
     public String getCurrentUser() {
