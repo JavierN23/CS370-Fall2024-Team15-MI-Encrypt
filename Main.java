@@ -7,7 +7,7 @@ public class Main {
 
         Credentials creds = Credentials.loadFromFile(); // Create an instance of the Credentials class to manage user credentials
         PasswordManager pm = PasswordManager.loadFromFile(); // Create an instance of the PasswordManager class to manage passwords
-        CreditCardManager ccm = CreditCardManager.loadFromFile(); // Load saved credit cards
+        CreditCardManager ccm = CreditCardManager.loadFromFile(); //Load Saved Credit Cards
 
         SwingUtilities.invokeLater(() -> new AppFrame(creds, pm, ccm)); // Create and display the login page.
         

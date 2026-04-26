@@ -77,6 +77,7 @@ public class AppFrame extends JFrame {
     }
     public void setCurrentUser(String username) {
         this.currentUser = username;
+        SessionManager.startSession(username);
     }
 
     public String getCurrentUser() {

@@ -7,6 +7,7 @@ public class CreditCardManager implements Serializable {
     private Map<String, List<CreditCardEntry>> cardsByUser = new HashMap<>();
 
     private String key(String username) {
+        if (username == null) return "";
         return username.trim().toLowerCase();
     }
 
@@ -15,6 +16,7 @@ public class CreditCardManager implements Serializable {
     }
 
     public List<CreditCardEntry> getCards(String username) {
+        if (username == null) return new ArrayList<>();
         return new ArrayList<>(getUserCards(username));
     }
 

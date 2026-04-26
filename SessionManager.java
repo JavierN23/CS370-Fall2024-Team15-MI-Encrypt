@@ -7,7 +7,7 @@ public class SessionManager {
     private static long lastActivityTime;
 
     //  Adjust depending on how strict you want the timeout to be.
-    private static final long TIMEOUT = 90 * 1000; 
+    private static final long TIMEOUT = 10 * 1000; 
 
     public static void startSession(String username) {
         currentUser = username;
@@ -49,6 +49,12 @@ public class SessionManager {
 
     public static boolean validateSession(AppFrame app) {
         if (!isLoggedIn()) {
+            app.showLogin();
+            return false;
+        }
+
+        if (!currentUser.equals(app.getCurrentUser())) {
+            endSession();
             app.showLogin();
             return false;
         }

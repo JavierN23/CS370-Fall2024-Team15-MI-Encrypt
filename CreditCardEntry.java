@@ -1,6 +1,7 @@
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 
 public class CreditCardEntry implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -22,6 +23,17 @@ public class CreditCardEntry implements Serializable {
         this.encryptedCVV = EncryptionService.encryptCTR(cvv);
         this.cardType = cardType;
         this.dateAdded = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy"));
+    }
+
+    public CreditCardEntry(String nickname, String cardholderName, String cardNumber,
+                           String expiryDate, String cvv, String cardType, String dateAdded) {
+        this.nickname = nickname;
+        this.cardholderName = cardholderName;
+        this.encryptedCardNumber = EncryptionService.encryptCTR(cardNumber);
+        this.expiryDate = expiryDate;
+        this.encryptedCVV = EncryptionService.encryptCTR(cvv);
+        this.cardType = cardType;
+        this.dateAdded = dateAdded;
     }
 
     // Getters
@@ -60,6 +72,26 @@ public class CreditCardEntry implements Serializable {
     }
     public void setCVV(String plain) {
         this.encryptedCVV = EncryptionService.encryptCTR(plain);
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof CreditCardEntry)) return false;
+        CreditCardEntry that = (CreditCardEntry) o;
+        return 
+        Objects.equals(nickname, that.nickname) &&
+        Objects.equals(cardholderName, that.cardholderName) &&
+        Objects.equals(encryptedCardNumber, that.encryptedCardNumber) &&
+        Objects.equals(expiryDate, that.expiryDate) &&
+        Objects.equals(encryptedCVV, that .encryptedCVV) &&
+        Objects.equals(cardType, that.cardType) &&
+        Objects.equals(dateAdded, that.dateAdded);
+        
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(nickname, cardholderName, encryptedCardNumber, expiryDate, encryptedCVV, cardType, dateAdded);
     }
 
     @Override
