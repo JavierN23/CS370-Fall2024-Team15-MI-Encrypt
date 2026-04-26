@@ -17,6 +17,7 @@ public class AppFrame extends JFrame {
     private final AdminPanel admin;
     private final TwoFactorPanel tfVerify;
     private final TwoFactorSetupPanel tfSetup;
+    private final ForgotPasswordPanel forgotP;
 
     private String currentUser;
 
@@ -44,6 +45,7 @@ public class AppFrame extends JFrame {
         admin = new AdminPanel(this, creds, null);
         tfSetup = new TwoFactorSetupPanel(this, creds);
         tfVerify = new TwoFactorPanel(this, creds);
+        forgotP = new ForgotPasswordPanel(this, creds);
 
         // Panels with CardLayout
         cards.add(login, "LOGIN");
@@ -54,6 +56,8 @@ public class AppFrame extends JFrame {
         cards.add(admin, "ADMIN");
         cards.add(tfSetup, "TFSETUP");
         cards.add(tfVerify, "TFVERIFY");
+        cards.add(forgotP, "FORGOT2");
+
 
         // Default to login page
         setContentPane(cards);
@@ -141,4 +145,11 @@ public class AppFrame extends JFrame {
         tfVerify.setup(username);
         layout.show(cards, "TFVERIFY");
     }
+
+    public void showForgotPasswordPanel() {
+        forgotP.clear();
+        layout.show(cards, "FORGOT2");
+
+    }
+
 }

@@ -9,6 +9,9 @@ public class AccountPanel extends JPanel {
     private final JLabel usernameValue = new JLabel();
     private final JTextField emailField = new JTextField(24);
     private final JComboBox<String> accountType = new JComboBox<>(new String[] {"Personal", "Business", "Both"});
+    private final JComboBox<String> securityQuestion = new JComboBox<>(new String[] {"What is your mother's maiden name?", "What was the name of your first pet?", "What was the make of your first car?", "What city were you born in?"});
+    
+    private final JTextField securityAnswerField = new JTextField(24);
     private final JCheckBox twoFactor = new JCheckBox("Enable Two-Factor Authentication");
     private final JCheckBox showPasswords = new JCheckBox("Show Passwords");
 
@@ -28,6 +31,8 @@ public class AccountPanel extends JPanel {
         // UI Style inputs
          UI.styleInput(emailField);
          UI.styleInput(accountType);
+         UI.styleInput(securityQuestion);
+         UI.styleInput(securityAnswerField);
          UI.styleInput(oldPasswordField);
          UI.styleInput(newPasswordField);
 
@@ -68,6 +73,12 @@ public class AccountPanel extends JPanel {
         card.add(UI.row("Account Type", accountType));
         UI.space(card, 10);
 
+        // Security Question and Answer
+        card.add(UI.row("Security Question", securityQuestion));
+        UI.space(card, 10);
+        card.add(UI.row("Security Answer", securityAnswerField));
+        UI.space(card, 10);
+
         // Two-factor authentication toggle
         twoFactor.setOpaque(false);
         twoFactor.setForeground(UI.MUTED);
@@ -89,7 +100,7 @@ public class AccountPanel extends JPanel {
         UI.space(card, 8);
         // Hide/show password checkbox
         card.add(showPasswords);
-        UI.space(card, 16);
+        UI.space(card, 8);
 
         showPasswords.setOpaque(false);
         showPasswords.setForeground(UI.MUTED);
@@ -109,7 +120,7 @@ public class AccountPanel extends JPanel {
             }
         });
         // Button row for actions
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 6));
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 3));
         buttons.setOpaque(false);
 
         JButton saveInfoBtn = UI.accentButton("Save Info");
@@ -146,6 +157,9 @@ public class AccountPanel extends JPanel {
 
         usernameValue.setText(account.getUsername());
         emailField.setText(account.getEmail());
+        securityQuestion.setSelectedItem(account.getSecurityQuestion());
+        securityAnswerField.setText(account.getSecurityAnswer());
+
         // Match account type to dropdown selection
         String type = account.getAccountType();
         if ("business".equalsIgnoreCase(type)) {
@@ -178,6 +192,9 @@ public class AccountPanel extends JPanel {
 
         // Rear update vaules from UI fields
         String email = emailField.getText().trim();
+        String securityQuestion = (String) this.securityQuestion.getSelectedItem();
+        String securityAnswer = securityAnswerField.getText().trim();
+
         String type = ((String) accountType.getSelectedItem()).toLowerCase();
         boolean tfa = twoFactor.isSelected();
 
@@ -187,7 +204,7 @@ public class AccountPanel extends JPanel {
             return;
         }
 
-        boolean updated = creds.updateAccountInfo(loadedUser, email, type, tfa);
+        boolean updated = creds.updateAccountInfo(loadedUser, email, type, securityQuestion, securityAnswer, tfa);
         if (!updated) {
             JOptionPane.showMessageDialog(this, "Unable to update account information. Check that the email is valid and account type is one of Personal, Business, or Both.");
             return;

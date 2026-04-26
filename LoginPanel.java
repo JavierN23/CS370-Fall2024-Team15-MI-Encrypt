@@ -65,10 +65,12 @@ public class LoginPanel extends JPanel {
         JButton login = UI.accentButton("Login");
         JButton signup = UI.secondaryButton("Sign Up");
         JButton reset = UI.secondaryButton("Reset");
+        JButton forgotP = UI.secondaryButton("Forgot Password");
 
         buttons.add(login);
         buttons.add(signup);
         buttons.add(reset);
+        buttons.add(forgotP);
 
         card.add(buttons);
         card.add(Box.createVerticalGlue());
@@ -98,6 +100,8 @@ public class LoginPanel extends JPanel {
         login.addActionListener(e -> doLogin());
         signup.addActionListener(e -> doSignUp());
         reset.addActionListener(e -> clear());
+        forgotP.addActionListener(e -> app.showForgotPasswordPanel());
+
 
         pass.addActionListener(e -> doLogin());
 

@@ -233,6 +233,8 @@ public class TwoFactorSetupPanel extends JPanel {
                     currentUsername,
                     account.getEmail(),
                     account.getAccountType(),
+                    account.getSecurityQuestion(),
+                    account.getSecurityAnswer(),
                     false
             );
         }

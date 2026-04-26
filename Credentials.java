@@ -29,7 +29,7 @@ public class Credentials implements Serializable {
                 || account.getAccountType().equalsIgnoreCase("both"));
     }
 
-    public boolean signUp(String username, String password, String email, String accountType, boolean twoFactorEnabled, String inviteCode, InviteCodeManager inviteCodeManager) {
+    public boolean signUp(String username, String password, String email, String accountType, String securityQuestion, String securityAnswer, boolean twoFactorEnabled, String inviteCode, InviteCodeManager inviteCodeManager) {
 
         ensureAccountsInitialized();
 
@@ -37,6 +37,9 @@ public class Credentials implements Serializable {
         password = password == null ? "" : password.trim();
         email = email == null ? "" : email.trim();
         accountType = accountType == null ? "" : accountType.trim().toLowerCase();
+        securityQuestion = securityQuestion == null ? "" : securityQuestion.trim();
+        securityAnswer = securityAnswer == null ? "" : securityAnswer.trim();
+
         inviteCode = inviteCode == null ? "" : inviteCode.trim();
 
 
@@ -48,11 +51,19 @@ public class Credentials implements Serializable {
             return false; 
         }
 
+        if (securityQuestion.isEmpty()) {
+            return false;
+        }
+
+        if (securityAnswer.isEmpty()) {
+            return false;
+        }
+
         if (accounts.containsKey(username)) {
             return false; // Username already exists
         }
         
-        UserAccount account = new UserAccount(username, password, email, accountType, twoFactorEnabled);
+        UserAccount account = new UserAccount(username, password, email, accountType, securityQuestion, securityAnswer, twoFactorEnabled);
 
         if (twoFactorEnabled) {
             account.setTotpSecret(TOTPUtil.generateSecret());
@@ -165,12 +176,14 @@ public class Credentials implements Serializable {
         return true;
     }
 
-    public boolean updateAccountInfo(String username, String newEmail, String newAccountType, boolean twoFactorEnabled) {
+    public boolean updateAccountInfo(String username, String newEmail, String newAccountType, String securityQuestion, String securityAnswer, boolean twoFactorEnabled) {
         ensureAccountsInitialized();
 
         username = username == null ? "" : username.trim();
         newEmail = newEmail == null ? "" : newEmail.trim();
         newAccountType = newAccountType == null ? "" : newAccountType.trim().toLowerCase();
+        securityQuestion = securityQuestion == null ? "" : securityQuestion.trim();
+        securityAnswer = securityAnswer == null ? "" : securityAnswer.trim();
 
         UserAccount account = accounts.get(username);
         if (account == null) {
@@ -183,6 +196,8 @@ public class Credentials implements Serializable {
 
         account.setEmail(newEmail);
         account.setAccountType(newAccountType);
+        account.setSecurityQuestion(securityQuestion);
+        account.setSecurityAnswer(securityAnswer);
         account.setTwoFactorEnabled(twoFactorEnabled);
 
         if (!twoFactorEnabled) {

@@ -9,6 +9,8 @@ public class UserAccount implements Serializable {
     private String password;
     private String email;
     private String accountType;
+    private String securityQuestion;
+    private String securityAnswer;
     private boolean twoFactorEnabled;
     private String totpSecret; // Store the Base32-encoded TOTP secret for 2FA
     private int failedAttempts;
@@ -19,11 +21,13 @@ public class UserAccount implements Serializable {
     private String businessRole;
     private List<String> allowedBusinessGroups;
 
-    public UserAccount(String username, String password, String email, String accountType, boolean twoFactorEnabled) {
+    public UserAccount(String username, String password, String email, String accountType, String securityQuestion, String securityAnswer, boolean twoFactorEnabled) {
         this.username = username;
         this.password = password;
         this.email = email;
         this.accountType = accountType;
+        this.securityQuestion = securityQuestion;
+        this.securityAnswer = securityAnswer;
         this.twoFactorEnabled = twoFactorEnabled;
         this.totpSecret = null; // Will be set during 2FA setup if enabled
         this.failedAttempts = 0;
@@ -49,7 +53,14 @@ public class UserAccount implements Serializable {
     public String getAccountType() {
         return accountType;
     }
+    
+    public String getSecurityQuestion() {
+        return securityQuestion;
+    }
 
+    public String getSecurityAnswer() {
+        return securityAnswer;
+    }
     public boolean isTwoFactorEnabled() {
         return twoFactorEnabled;
     }
@@ -113,6 +124,15 @@ public class UserAccount implements Serializable {
 
     public void setAccountType(String accountType) {
         this.accountType = accountType;
+    }
+    public void setSecurityQuestion(String securityQuestion) {
+        this.securityQuestion = securityQuestion;
+        // This method can be implemented to store the security question if needed
+    }
+
+    public void setSecurityAnswer(String securityAnswer) {
+        this.securityAnswer = securityAnswer;
+        // This method can be implemented to store the security answer if needed
     }
 
     public void setTwoFactorEnabled(boolean twoFactorEnabled) {

@@ -9,9 +9,13 @@ public class SignUpPanel extends JPanel {
     private final JTextField user = new JTextField(24);
     private final JPasswordField pass = new JPasswordField(24);
     private final JTextField email = new JTextField(24);
+    private final JTextField securityAnswer = new JTextField(24);
     private final JCheckBox twoFactor = new JCheckBox("Enable Two-Factor Authentication");
 
+
     private final JComboBox<String> accountType = new JComboBox<>(new String[] {"Personal", "Business", "Both"});
+    private final JComboBox<String> securityQuestion = new JComboBox<>(new String[] {"What is your mother's maiden name?", "What was the name of your first pet?", "What was the make of your first car?", "What city were you born in?"});
+    
     private final JTextField inviteCode = new JTextField(24);
     private final JLabel inviteHelp = UI.subtle("For Business or Both accounts, enter your invite code to receive business access.");
 
@@ -24,6 +28,8 @@ public class SignUpPanel extends JPanel {
         UI.styleInput(pass);
         UI.styleInput(email);
         UI.styleInput(accountType);
+        UI.styleInput(securityQuestion);
+        UI.styleInput(securityAnswer);
         UI.styleInput(inviteCode);
 
         setLayout(new BorderLayout());
@@ -56,6 +62,12 @@ public class SignUpPanel extends JPanel {
         UI.space(card, 14);
 
         card.add(UI.row("Account Type", accountType));
+        UI.space(card, 14);
+
+        card.add(UI.row("Security Question", securityQuestion));
+        UI.space(card, 14);
+
+        card.add(UI.row("Security Answer", securityAnswer));
         UI.space(card, 14);
 
         card.add(UI.row("Invite Code", inviteCode));
@@ -106,6 +118,8 @@ public class SignUpPanel extends JPanel {
         email.setText("");
         inviteCode.setText("");
         accountType.setSelectedIndex(0);
+        securityQuestion.setSelectedIndex(0);
+        securityAnswer.setText("");
         twoFactor.setSelected(false);
         updateInviteControls();
     }
@@ -130,9 +144,11 @@ public class SignUpPanel extends JPanel {
         String e = email.getText().trim();
         boolean tfa = twoFactor.isSelected();
         String type = ((String) accountType.getSelectedItem()).toLowerCase();
+        String securityQ = ((String) securityQuestion.getSelectedItem()).trim();
+        String securityA = securityAnswer.getText().trim();
         String code = inviteCode.getText().trim();
 
-        if (u.isEmpty() || p.isEmpty() || e.isEmpty()) {
+        if (u.isEmpty() || p.isEmpty() || e.isEmpty() || securityQ.isEmpty() || securityA.isEmpty()) { //securityQ.isEmpty() should never be true since it's a dropdown, but we'll check just in case
             JOptionPane.showMessageDialog(this, "All fields are required.");
             return;
         }
@@ -140,9 +156,9 @@ public class SignUpPanel extends JPanel {
         boolean created;
         
         if (("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) && !code.isEmpty()) {
-            created = creds.signUp(u, p, e, type, tfa, code, inviteCodeManager);
+            created = creds.signUp(u, p, e, type, securityQ, securityA, tfa, code, inviteCodeManager);
         } else {
-            created = creds.signUp(u, p, e, type, tfa, "", inviteCodeManager);
+            created = creds.signUp(u, p, e, type, securityQ, securityA, tfa, "", inviteCodeManager);
         }
 
         if (!created) {

@@ -75,12 +75,16 @@ public class UI {
     }
 
     public static JPanel row(String labelText, JComponent field) {
-        JPanel r = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+    return row(labelText, field, 12, 90); // default gap and label width
+}
+
+    public static JPanel row(String labelText, JComponent field, int gap, int labelWidth) {
+        JPanel r = new JPanel(new FlowLayout(FlowLayout.CENTER, gap, 0));
         r.setOpaque(false);
         r.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel lbl = label(labelText);
-        Dimension labelSize = new Dimension(90, 34);
+        Dimension labelSize = new Dimension(labelWidth, 34);
         lbl.setPreferredSize(labelSize);
         lbl.setMaximumSize(labelSize);
         lbl.setMinimumSize(labelSize);

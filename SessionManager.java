@@ -7,7 +7,7 @@ public class SessionManager {
     private static long lastActivityTime;
 
     //  Adjust depending on how strict you want the timeout to be.
-    private static final long TIMEOUT = 10 * 1000; 
+    private static final long TIMEOUT = 90 * 1000; // 90 seconds
 
     public static void startSession(String username) {
         currentUser = username;
