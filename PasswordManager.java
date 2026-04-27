@@ -4,8 +4,10 @@ import java.util.*;
 public class PasswordManager implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    // Stores password entries by vault
     private Map<String, List<PasswordEntry>> entriesByVault = new HashMap<>();
 
+    // Builds a vault key
     private String key(String username, String accountType) {
         if ("Business".equalsIgnoreCase(accountType)) {
             return "BUSINESS_SHARED";
@@ -13,20 +15,24 @@ public class PasswordManager implements Serializable {
         return username.trim() + "|" + accountType.trim();
     }
 
+    // Gets the list for a vault, or creates it if needed
     private List<PasswordEntry> getVaultEntries(String username, String accountType) {
         return entriesByVault.computeIfAbsent(key(username, accountType), k -> new ArrayList<>());
     }
 
+    // Checks if user can open the business vault
     public boolean canAccessBusinessVault(UserAccount user) {
         return user != null && user.isBusinessAuthorized();
     }
 
+    // Checks if user can add, edit, or delete business entries
     public boolean canModifyBusinessVault(UserAccount user) {
         return user != null
                 && user.isBusinessAuthorized()
                 && user.isBusinessAdmin();
     }
 
+    // Checks if user can view one business entry
     public boolean canViewBusinessEntry(UserAccount user, PasswordEntry entry) {
         if (user == null || entry == null) {
             return false;
@@ -36,13 +42,16 @@ public class PasswordManager implements Serializable {
             return false;
         }
 
+        // Admin can view everything
         if (user.isBusinessAdmin()) {
             return true;
         }
 
+        // Employees can only view entries from their group
         return user.hasBusinessGroup(entry.getBusinessGroup());
     }
 
+    // Returns the entries the user is allowed to see
     public List<PasswordEntry> getVisibleEntries(UserAccount user, String accountType) {
         if (user == null || accountType == null) {
             return new ArrayList<>();
@@ -76,6 +85,7 @@ public class PasswordManager implements Serializable {
         return filtered;
     }
 
+    // Returns the decrypted password if the user has access
     public String getDecryptedPassword(UserAccount user, String accountType, PasswordEntry entry) {
         if (user == null || accountType == null || entry == null) {
             return null;
@@ -88,16 +98,19 @@ public class PasswordManager implements Serializable {
         return EncryptionService.decryptCTR(entry.getEncryptedPassword());
     }
 
+    // Adds a new password entry
     public boolean addEntry(UserAccount user, String accountType, PasswordEntry entry) {
         if (user == null || accountType == null || entry == null) {
             return false;
         }
 
         if ("Business".equalsIgnoreCase(accountType)) {
+            // Only admins can add to business vault
             if (!canModifyBusinessVault(user)) {
                 return false;
             }
 
+            // Business entries must have a group
             if (entry.getBusinessGroup() == null || entry.getBusinessGroup().trim().isEmpty()) {
                 return false;
             }
@@ -108,15 +121,19 @@ public class PasswordManager implements Serializable {
         return true;
     }
 
+    // Updates an existing password entry
     public boolean updateEntry(UserAccount user, String accountType, PasswordEntry originalEntry, PasswordEntry updatedEntry) {
         if (user == null || accountType == null || updatedEntry == null) {
             return false;
         }
 
         if ("Business".equalsIgnoreCase(accountType)) {
+            // Only admin can edit business entries
             if (!canModifyBusinessVault(user)) {
             return false;
             }
+
+            // Business entries must have a group
             if (updatedEntry.getBusinessGroup() == null || updatedEntry.getBusinessGroup().trim().isEmpty()) {
                 return false;
             }
@@ -134,11 +151,13 @@ public class PasswordManager implements Serializable {
 
     }
 
+    // Removes a password entry
     public boolean removeEntry(UserAccount user, String accountType, PasswordEntry entryToRemove) {
         if (user == null || accountType == null || entryToRemove == null) {
             return false;
         }
 
+        // Only admin can delete from business vault
         if ("Business".equalsIgnoreCase(accountType) && !canModifyBusinessVault(user)) {
             return false;
         }
@@ -151,10 +170,12 @@ public class PasswordManager implements Serializable {
             return removed;
     }
 
+    // Returns all entries in a vault
     public List<PasswordEntry> getRawEntriesForVault(String username, String accountType) {
         return new ArrayList<>(getVaultEntries(username, accountType));
     }
 
+    // Deletes all vault data for one user
     public void deleteUser(String username) {
         if (username == null) {
             return;
@@ -165,6 +186,7 @@ public class PasswordManager implements Serializable {
         saveToFile();
     }
 
+    // Saves password data to file
     public void saveToFile() {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(UI.passwordsFile()))) {
             oos.writeObject(this);
@@ -173,6 +195,7 @@ public class PasswordManager implements Serializable {
         }
     }
 
+    // Loads password data from file
     public static PasswordManager loadFromFile() {
         File file = UI.passwordsFile();
         if (!file.exists()) {

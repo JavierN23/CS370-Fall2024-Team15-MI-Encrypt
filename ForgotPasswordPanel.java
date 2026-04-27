@@ -156,23 +156,27 @@ public class ForgotPasswordPanel extends JPanel {
 
         // Basic validation
         if (username.isEmpty() || email.isEmpty() || code.isEmpty() || newPassword.isEmpty() || confirmPassword.isEmpty()) {
+            statusLabel.setForeground(new Color(0xE05050));
             statusLabel.setText("Please fill in all fields.");
             return;
         }
 
         if (!newPassword.equals(confirmPassword)) {
+            statusLabel.setForeground(new Color(0xE05050));
             statusLabel.setText("Passwords do not match.");
             return;
         }
 
         UserAccount user = creds.getAccount(username);
         if (user == null) {
-            statusLabel.setText("No account found with that username.");
+            statusLabel.setForeground(new Color(0xE05050));
+            statusLabel.setText("Account information could not be verified.");
             return;
         }  
 
         if (!user.getEmail().equalsIgnoreCase(email)) {
-            statusLabel.setText("Email does not match our records.");
+            statusLabel.setForeground(new Color(0xE05050));
+            statusLabel.setText("Account information could not be verified.");
             return;
         }
         
@@ -194,9 +198,12 @@ public class ForgotPasswordPanel extends JPanel {
         user.setPassword(newPassword);
         creds.unlockAccount(username); // Unlock account if it was locked due to failed login attempts
         creds.saveToFile(); // Save updated credentials to file, im not sure if this is necessary since the password is hashed and the user object should update the file when setPassword is called, but just to be safe
-            statusLabel.setText("Security question answer is correct.");
-            statusLabel.setForeground(new Color(0x7CFF00)); // Change text color to green for success 
+        
+        statusLabel.setText("Security question answer is correct.");
+        statusLabel.setForeground(new Color(0x7CFF00)); // Change text color to green for success 
+        
         JOptionPane.showMessageDialog(this, "Password reset successful! You can now log in with your new password.", "Success", JOptionPane.INFORMATION_MESSAGE);// Show success message 
+        clear();
         app.showLogin();
 
     }
@@ -211,12 +218,12 @@ public class ForgotPasswordPanel extends JPanel {
 
         UserAccount user = creds.getAccount(username);
         if (user == null) {
-            statusLabel.setText("Account or email not found.");
+            statusLabel.setText("Account information could not be verified.");
             return;
         }
 
         if (!user.getEmail().equalsIgnoreCase(email)) {
-            statusLabel.setText("Account or email not found.");
+            statusLabel.setText("Account information could not be verified.");
             return;
         }
 
@@ -227,14 +234,9 @@ public class ForgotPasswordPanel extends JPanel {
         confirmPasswordField.setEnabled(true); // Enable confirm password field
         usernameField.setEnabled(false); // Disable username field to prevent changes after verification
         emailField.setEnabled(false); // Disable email field to prevent changes after verification
+
         statusLabel.setForeground(new Color(0x7CFF00)); // Change text color to green for success
         statusLabel.setText("Account verified. Please answer the security question and enter your new password."); // Update status message
-
-
-
         // This method can be used to implement real-time validation as the user types, if desired. For now, it's just a placeholder.
     }
-
-    
 }
-

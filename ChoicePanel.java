@@ -8,7 +8,7 @@ public class ChoicePanel extends JPanel {
     private final JLabel title = UI.h1("");
     private final JLabel businessStatus = UI.subtle("");
 
-    // Action buttons
+    // Main buttons on this screen
     private final JButton personal = UI.accentButton("Personal Vault");
     private final JButton business = UI.accentButton("Business Vault");
     private final JButton adminPanel = UI.secondaryButton("Admin Panel");
@@ -36,6 +36,7 @@ public class ChoicePanel extends JPanel {
 
         UI.space(content, 10);
 
+        // Message under the title
         JLabel subtitle = UI.subtle("Select a vault to manage your passwords:");
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         content.add(subtitle);
@@ -84,6 +85,7 @@ public class ChoicePanel extends JPanel {
         logout.addActionListener(e -> app.showLogin());
     }
 
+    // Updates the screen based on the user's account type
     public void setUser(String username) {
         title.setText("Hi, " + username + "!");
 
@@ -104,6 +106,7 @@ public class ChoicePanel extends JPanel {
 
         String type = accountInfo.getAccountType();
 
+        // Hide everything first
         personal.setVisible(false);
         personal.setEnabled(false);
 
@@ -116,19 +119,23 @@ public class ChoicePanel extends JPanel {
         businessStatus.setVisible(false);
         businessStatus.setText("");
 
+    // Show personal vault button
     if ("personal".equalsIgnoreCase(type)) {
         personal.setVisible(true);
         personal.setEnabled(true);
 
+    // Show business vault button
     } else if ("business".equalsIgnoreCase(type)) {
         business.setVisible(true);
         business.setEnabled(true);
 
+        // Show warning if business account is not approve yet
         if (!accountInfo.isBusinessAuthorized()) {
             businessStatus.setText("Business Vault access is limited until authorization is granted.");
             businessStatus.setVisible(true);
         }
 
+    // Show both vault buttons
     } else if ("both".equalsIgnoreCase(type)) {
         personal.setVisible(true);
         personal.setEnabled(true);
@@ -136,11 +143,13 @@ public class ChoicePanel extends JPanel {
         business.setVisible(true);
         business.setEnabled(true);
 
+        // Show warning if business access is not approved yet
         if (!accountInfo.isBusinessAuthorized()) {
             businessStatus.setText("Business Vault access is limited until authorization is granted.");
             businessStatus.setVisible(true);
             }
         }
+        // Only show admin for authorized business admin
         if (("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type))
                 && accountInfo.isBusinessAuthorized()
                 && accountInfo.isBusinessAdmin()) {

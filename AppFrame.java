@@ -2,13 +2,16 @@ import java.awt.*;
 import javax.swing.*;
 
 public class AppFrame extends JFrame {
+    // Main data managers used across the app
     private final Credentials creds;
     private final PasswordManager pm;
     private final CreditCardManager ccm;
 
+    // CardLayout let us switch between screens
     private final CardLayout layout = new CardLayout();
     private final JPanel cards = new JPanel(layout);
 
+    // All app screens/panels
     private final LoginPanel login;
     private final SignUpPanel signUp;
     private final ChoicePanel choice;
@@ -17,8 +20,9 @@ public class AppFrame extends JFrame {
     private final AdminPanel admin;
     private final TwoFactorPanel tfVerify;
     private final TwoFactorSetupPanel tfSetup;
-    private final ForgotPasswordPanel forgotP;
+    private final ForgotPasswordPanel forgotPassword;
 
+    // Tracking; who is logged in
     private String currentUser;
 
     public AppFrame(Credentials creds, PasswordManager pm,
@@ -36,7 +40,7 @@ public class AppFrame extends JFrame {
 
         setAppIcon();
 
-        // Panels
+        // create all panels
         login = new LoginPanel(this, creds);
         signUp = new SignUpPanel(this, creds);
         choice = new ChoicePanel(this, creds);
@@ -45,7 +49,7 @@ public class AppFrame extends JFrame {
         admin = new AdminPanel(this, creds, null);
         tfSetup = new TwoFactorSetupPanel(this, creds);
         tfVerify = new TwoFactorPanel(this, creds);
-        forgotP = new ForgotPasswordPanel(this, creds);
+        forgotPassword = new ForgotPasswordPanel(this, creds);
 
         // Panels with CardLayout
         cards.add(login, "LOGIN");
@@ -56,7 +60,7 @@ public class AppFrame extends JFrame {
         cards.add(admin, "ADMIN");
         cards.add(tfSetup, "TFSETUP");
         cards.add(tfVerify, "TFVERIFY");
-        cards.add(forgotP, "FORGOT2");
+        cards.add(forgotPassword, "FORGOT");
 
 
         // Default to login page
@@ -66,6 +70,7 @@ public class AppFrame extends JFrame {
         
     }
 
+    // Loads the app icon from resources
     private void setAppIcon() {
         java.net.URL iconUrl = AppFrame.class.getResource("/MI_Encrypt.png");
 
@@ -79,17 +84,21 @@ public class AppFrame extends JFrame {
             System.out.println("Not Found");
         }
     }
+
+    // Saves the current user and starts their session
     public void setCurrentUser(String username) {
         this.currentUser = username;
         SessionManager.startSession(username);
     }
 
+    // Returns the current logged-in user
     public String getCurrentUser() {
         return currentUser;
     }
     
     // Navigation methods
     
+    // Go to login screen and clear session
     public void showLogin() {
         SessionManager.endSession();
         currentUser = null;
@@ -97,33 +106,34 @@ public class AppFrame extends JFrame {
         layout.show(cards, "LOGIN");
     }
 
+    // Go to sign up screen
     public void showSignUp() {
         signUp.clear();
         layout.show(cards, "SIGNUP");
     }
 
     // Show choice page after login
-
     public void showChoice() {
         if (!SessionManager.validateSession(this)) return;
         choice.setUser(currentUser);
         layout.show(cards, "CHOICE");
     }
 
-    // Show vault page for selected type
-
+    // Show vault page for the selected vault type
     public void showVault(String type) {
         if (!SessionManager.validateSession(this)) return;
         vault.load(currentUser, type);
         layout.show(cards, "VAULT");
     }
 
+    // Show account screen
     public void showAccount() {
         if (!SessionManager.validateSession(this)) return;
         account.loadUser(currentUser);
         layout.show(cards, "ACCOUNT");
     }
 
+    // Show admin screen
     public void showAdmin() {
         if (!SessionManager.validateSession(this)) return;
         admin.load(currentUser);
@@ -146,9 +156,10 @@ public class AppFrame extends JFrame {
         layout.show(cards, "TFVERIFY");
     }
 
+    // Show forgot password screen
     public void showForgotPasswordPanel() {
-        forgotP.clear();
-        layout.show(cards, "FORGOT2");
+        forgotPassword.clear();
+        layout.show(cards, "FORGOT");
 
     }
 

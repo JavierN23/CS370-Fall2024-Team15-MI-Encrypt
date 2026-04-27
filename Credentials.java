@@ -10,25 +10,29 @@ public class Credentials implements Serializable {
     private static final String FILE_NAME = "users.dat";
     private static final int MAX_LOGIN_ATTEMPTS = 3;
 
-    // For Testing the Master Key functionality.
+    // Used to give the first business admin acess
     private static final String OWNER_BOOTSTRAP_CODE = "MIENCRYPT";
 
+    // Make sure the accounts map exists
     private void ensureAccountsInitialized() {
         if (accounts == null) {
             accounts = new HashMap<>();
         }
     }
 
+    // Checks if the account type is valid
     private boolean isValidAccountType(String type) {
         return type.equals("personal") || type.equals("business") || type.equals("both");
     }
 
+    // Check if this is a business or both account
     private boolean isBusinessType(UserAccount account) {
         return account != null
                 && (account.getAccountType().equalsIgnoreCase("business") 
                 || account.getAccountType().equalsIgnoreCase("both"));
     }
 
+    // Creates a new account
     public boolean signUp(String username, String password, String email, String accountType, String securityQuestion, String securityAnswer, boolean twoFactorEnabled, String inviteCode, InviteCodeManager inviteCodeManager) {
 
         ensureAccountsInitialized();
@@ -43,14 +47,17 @@ public class Credentials implements Serializable {
         inviteCode = inviteCode == null ? "" : inviteCode.trim();
 
 
+        // Make sure required fields are filled in
         if (username.isEmpty() || password.isEmpty() || email.isEmpty() || accountType.isEmpty()) {
             return false; 
         }
         
+        // Reject invalid account types
         if (!isValidAccountType(accountType)) {
             return false; 
         }
 
+        // Security Question and answer are required
         if (securityQuestion.isEmpty()) {
             return false;
         }
@@ -59,18 +66,22 @@ public class Credentials implements Serializable {
             return false;
         }
 
+        // Username must be unique
         if (accounts.containsKey(username)) {
             return false; // Username already exists
         }
         
         UserAccount account = new UserAccount(username, password, email, accountType, securityQuestion, securityAnswer, twoFactorEnabled);
 
+        // Make a 2FA secret if 2FA is turned on
         if (twoFactorEnabled) {
             account.setTotpSecret(TOTPUtil.generateSecret());
         }
 
+        // Ensures a business user starts with no business access until approve
         account.revokeBusinessAccess();
 
+        // Business and both accounts can buse an invite code
         if ((accountType.equals("business") || accountType.equals("both")) 
                 && !inviteCode.isEmpty()) {
             if (inviteCodeManager == null || !inviteCodeManager.redeemCode(inviteCode, account)) {
@@ -83,6 +94,7 @@ public class Credentials implements Serializable {
         return true;
     }
 
+    // Logs a user in
     public boolean login(String username, String password) {
         ensureAccountsInitialized();
         
@@ -95,10 +107,12 @@ public class Credentials implements Serializable {
             return false;
         }
 
+        // Block login if the account is locked
         if (account.isLocked()) {
             return false;
         }
 
+        // Reset failed attempts on correct password
         if (account.getPassword().equals(password)) {
             account.setFailedAttempts(0);
             saveToFile();
@@ -107,6 +121,7 @@ public class Credentials implements Serializable {
             int attempts = account.getFailedAttempts() + 1;
             account.setFailedAttempts(attempts);
 
+            // Lock account after too many failed tries
             if (attempts >= MAX_LOGIN_ATTEMPTS) {
                 account.setLocked(true);
             }
@@ -116,6 +131,7 @@ public class Credentials implements Serializable {
         }
     }
 
+    // Returns how many login tries are left
     public int getRemainingAttempts(String username) {
         ensureAccountsInitialized();
         
@@ -128,6 +144,7 @@ public class Credentials implements Serializable {
         return Math.max(0, MAX_LOGIN_ATTEMPTS - account.getFailedAttempts());
     }
 
+    // Checks if an account is locked
     public boolean isLocked(String username) {
         ensureAccountsInitialized();
 
@@ -136,6 +153,7 @@ public class Credentials implements Serializable {
         return account != null && account.isLocked();
     }
 
+    // Unlocks an account and resets failed attempts
     public boolean unlockAccount(String username) {
         ensureAccountsInitialized();
 
@@ -151,6 +169,7 @@ public class Credentials implements Serializable {
         return true;
     }
 
+    // Changes a user's password
     public boolean changePassword(String username, String oldPassword, String newPassword) {
         ensureAccountsInitialized();
         
@@ -163,6 +182,7 @@ public class Credentials implements Serializable {
             return false;
         }
 
+        // Old password must match
         if (!account.getPassword().equals(oldPassword)) {
             return false;
         }
@@ -176,6 +196,7 @@ public class Credentials implements Serializable {
         return true;
     }
 
+    // Updates account info
     public boolean updateAccountInfo(String username, String newEmail, String newAccountType, String securityQuestion, String securityAnswer, boolean twoFactorEnabled) {
         ensureAccountsInitialized();
 
@@ -190,6 +211,7 @@ public class Credentials implements Serializable {
             return false;
         }
 
+        // Makes sure the new type is valid
         if (!isValidAccountType(newAccountType)){
             return false;
         }
@@ -200,12 +222,14 @@ public class Credentials implements Serializable {
         account.setSecurityAnswer(securityAnswer);
         account.setTwoFactorEnabled(twoFactorEnabled);
 
+        // Handle 2FA secret
         if (!twoFactorEnabled) {
             account.setTotpSecret(null);
         } else if (account.getTotpSecret() == null || account.getTotpSecret().isBlank()) {
             account.setTotpSecret(TOTPUtil.generateSecret());
         }
 
+        // Personal accounts should not keep business access
         if ("personal".equals(newAccountType)) {
             account.revokeBusinessAccess();
         }
@@ -214,6 +238,7 @@ public class Credentials implements Serializable {
         return true;
     }
 
+    // Deletes an account
     public boolean deleteAccount(String username) {
         ensureAccountsInitialized();
 
@@ -226,6 +251,7 @@ public class Credentials implements Serializable {
         return false; // Not found
     }
 
+    // Gets one account by username
     public UserAccount getAccount(String username) {
         ensureAccountsInitialized();
 
@@ -236,6 +262,7 @@ public class Credentials implements Serializable {
         return accounts.get(username);
     }
 
+    // Gives or removes business access
     public boolean setBusinessAccess(String username, boolean authorized) {
         ensureAccountsInitialized();
 
@@ -246,6 +273,7 @@ public class Credentials implements Serializable {
             return false;
         }
 
+        // Only business users can have business access
         if (!isBusinessType(account)) {
             return false; // Not a business account
         }
@@ -255,6 +283,7 @@ public class Credentials implements Serializable {
         } else {
             account.setBusinessAuthorized(true);
 
+            // Default role becomes employee
             if ("none".equalsIgnoreCase(account.getBusinessRole())) {
                 account.setBusinessRole("employee");
             }
@@ -264,6 +293,7 @@ public class Credentials implements Serializable {
         return true;
     }
 
+    // Sets the business role
     public boolean setBusinessRole(String username, String role) {
         ensureAccountsInitialized();
 
@@ -279,6 +309,7 @@ public class Credentials implements Serializable {
             return false; // Not a business account
         }
 
+        // Only allow valid roles
         if (!role.equals("employee") && !role.equals("admin") && !role.equals("none")) {
             return false; // Invalid role
         }
@@ -296,6 +327,7 @@ public class Credentials implements Serializable {
         return true;
     }
 
+    // Promotes a user to business admin
     public boolean promoteToBusinessAdmin(String username) {
         ensureAccountsInitialized();
 
@@ -314,6 +346,7 @@ public class Credentials implements Serializable {
     return true;
     }
 
+    // Adds a business group to a user
     public boolean addBusinessGroup(String username, String group) {
         ensureAccountsInitialized();
 
@@ -329,6 +362,7 @@ public class Credentials implements Serializable {
             return false; // Not a business account
         }
 
+        // User must already have business access
         if (!account.isBusinessAuthorized()) {
             return false; // User doesn't have business access
         }
@@ -338,6 +372,7 @@ public class Credentials implements Serializable {
         return true;
     }
 
+    // Removes a business group from a user
     public boolean removeBusinessGroup(String username, String group) {
         ensureAccountsInitialized();
 
@@ -358,6 +393,7 @@ public class Credentials implements Serializable {
         return true;
     }
 
+    // Gets all business groups for a user
     public List<String> getBusinessGroups(String username) {
         ensureAccountsInitialized();
 
@@ -371,6 +407,7 @@ public class Credentials implements Serializable {
         return account.getAllowedBusinessGroups();
     }
 
+    // Clears all business groups
     public boolean clearBusinessGroups(String username) {
         ensureAccountsInitialized();
 
@@ -386,6 +423,7 @@ public class Credentials implements Serializable {
         return true;
     }
 
+    // Checks if the user has business access
     public boolean isBusinessAuthorized(String username) {
         ensureAccountsInitialized();
         
@@ -394,6 +432,7 @@ public class Credentials implements Serializable {
         return account != null && account.isBusinessAuthorized();
     }
 
+    // Checks if the user is a business admin
     public boolean isBusinessAdmin(String username) {
         ensureAccountsInitialized();
         username = username == null ? "" : username.trim();
@@ -401,11 +440,13 @@ public class Credentials implements Serializable {
         return account != null && account.isBusinessAdmin();
     }
 
+    // Returns all accounts
     public List<UserAccount> getAllAccounts() {
         ensureAccountsInitialized();
         return new ArrayList<>(accounts.values());
     }
 
+    // Checks if there is already a business admin
     public boolean hasAnyBusinessAdmin() {
         ensureAccountsInitialized();
         for (UserAccount account : accounts.values()) {
@@ -416,6 +457,7 @@ public class Credentials implements Serializable {
         return false;
     }
 
+    // Lets the first business admin claim admin access
     public boolean claimInitialBusinessAdmin(String username, String bootstrapCode) {
         ensureAccountsInitialized();
         username = username == null ? "" : username.trim();
@@ -430,10 +472,12 @@ public class Credentials implements Serializable {
             return false; // Not a business account
         }
 
+        // Only works if no admin exists yet
         if (hasAnyBusinessAdmin()) {
             return false; // Admin already exists
         }
 
+        // Code must match
         if (!OWNER_BOOTSTRAP_CODE.equals(bootstrapCode)) {
             return false; // Invalid master key
         }

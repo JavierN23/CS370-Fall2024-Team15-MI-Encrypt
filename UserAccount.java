@@ -5,14 +5,19 @@ import java.util.List;
 public class UserAccount implements Serializable {
     private static final long serialVersionUID = 1L;
     
+    // Basic account info
     private String username;
     private String password;
     private String email;
     private String accountType;
     private String securityQuestion;
     private String securityAnswer;
+
+    // 2FA info
     private boolean twoFactorEnabled;
     private String totpSecret; // Store the Base32-encoded TOTP secret for 2FA
+
+    // Login lock info
     private int failedAttempts;
     private boolean locked;
 
@@ -21,6 +26,7 @@ public class UserAccount implements Serializable {
     private String businessRole;
     private List<String> allowedBusinessGroups;
 
+    // Creates new user
     public UserAccount(String username, String password, String email, String accountType, String securityQuestion, String securityAnswer, boolean twoFactorEnabled) {
         this.username = username;
         this.password = password;
@@ -29,10 +35,13 @@ public class UserAccount implements Serializable {
         this.securityQuestion = securityQuestion;
         this.securityAnswer = securityAnswer;
         this.twoFactorEnabled = twoFactorEnabled;
+
         this.totpSecret = null; // Will be set during 2FA setup if enabled
+        
         this.failedAttempts = 0;
         this.locked = false;
 
+        // Business access starts off diabled
         this.businessAuthorized = false;
         this.businessRole = "none";
         this.allowedBusinessGroups = new ArrayList<>();
@@ -89,18 +98,22 @@ public class UserAccount implements Serializable {
         return businessRole;
     }
 
+    // Returns a copy of the business groups
     public List<String> getAllowedBusinessGroups() {
         return new ArrayList<>(allowedBusinessGroups);
     }
 
+    // Checks if user is a business admin
     public boolean isBusinessAdmin() {
         return businessAuthorized && "admin".equalsIgnoreCase(businessRole);
     }
 
+    // Checks if user is a business employee
     public boolean isBusinessEmployee() {
         return businessAuthorized && "employee".equalsIgnoreCase(businessRole);
     }
 
+    // Checks if user belongs to a business group
     public boolean hasBusinessGroup(String group) {
         if (group == null || allowedBusinessGroups == null) {
             return false;
@@ -151,15 +164,18 @@ public class UserAccount implements Serializable {
         this.locked = locked;
     }
 
+    // Gives or removes business access
     public void setBusinessAuthorized(boolean businessAuthorized) {
         this.businessAuthorized = businessAuthorized;
 
+        // Clear role and groups if access is removed
         if (!businessAuthorized) {
             this.businessRole = "none";
             this.allowedBusinessGroups = new ArrayList<>();
         }
     }
 
+    // Sets the business role
     public void setBusinessRole(String businessRole) {
         if (businessRole == null) {
             this.businessRole = "none";
@@ -167,12 +183,15 @@ public class UserAccount implements Serializable {
         }
 
         String normalized = businessRole.trim().toLowerCase();
+
+        // Only allow valid roles
         if (!normalized.equals("admin") && !normalized.equals("employee") && !normalized.equals("none")) {
             normalized = "none"; // Default to "none" if an invalid role is provided
         }
         this.businessRole = normalized;
     }
 
+    // Replaces the business groups list
     public void setAllowedBusinessGroups(List<String> allowedBusinessGroups) {
         this.allowedBusinessGroups = new ArrayList<>();
 
@@ -184,6 +203,7 @@ public class UserAccount implements Serializable {
         }
     }
 
+    // Adds a business group if it's not already there
     public void addBusinessGroup(String group) {
         if (group == null || group.trim().isEmpty()) {
             return; // Ignore null or empty group names
@@ -195,6 +215,7 @@ public class UserAccount implements Serializable {
         }
     }
 
+    // Removes a business group
     public void removeBusinessGroup(String group) {
         if (group == null) {
             return; // Ignore null or empty group names
@@ -203,18 +224,21 @@ public class UserAccount implements Serializable {
         allowedBusinessGroups.removeIf(g -> g != null && g.equalsIgnoreCase(group));
     }
 
+    // Gives employee-level business access
     public void grantBusinessEmployeeAccess(List<String> groups) {
         this.businessAuthorized = true;
         this.businessRole = "employee";
         setAllowedBusinessGroups(groups);
     }
 
+    // Gives admin-level business access
     public void grantBusinessAdminAccess() {
         this.businessAuthorized = true;
         this.businessRole = "admin";
         this.allowedBusinessGroups = new ArrayList<>();
     }
 
+    // Removes all business access
     public void revokeBusinessAccess() {
         this.businessAuthorized = false;
         this.businessRole = "none";

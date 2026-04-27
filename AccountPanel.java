@@ -5,22 +5,28 @@ public class AccountPanel extends JPanel {
     private final AppFrame app;
     private final Credentials creds;
 
-    // Account info fields
+    // Displays the Current Username
     private final JLabel usernameValue = new JLabel();
     private final JTextField emailField = new JTextField(24);
+    // Account Information Fields
     private final JComboBox<String> accountType = new JComboBox<>(new String[] {"Personal", "Business", "Both"});
+    // Security Questions:
     private final JComboBox<String> securityQuestion = new JComboBox<>(new String[] {"What is your mother's maiden name?", "What was the name of your first pet?", "What was the make of your first car?", "What city were you born in?"});
     
     private final JTextField securityAnswerField = new JTextField(24);
+    // Security-Related Options 
     private final JCheckBox twoFactor = new JCheckBox("Enable Two-Factor Authentication");
     private final JCheckBox showPasswords = new JCheckBox("Show Passwords");
 
+    // Password Change Fields
     private final JPasswordField oldPasswordField = new JPasswordField(20);
     private final JPasswordField newPasswordField = new JPasswordField(20);
 
+    // Stores the default echo characters so password visibility can be restored
     private char oldEchoChar;
     private char newEchoChar;
     
+    // For tracking the currently loaded username
     private String loadedUser;
 
 
@@ -36,26 +42,29 @@ public class AccountPanel extends JPanel {
          UI.styleInput(oldPasswordField);
          UI.styleInput(newPasswordField);
 
+         // Save deafult password masking characters
         oldEchoChar = oldPasswordField.getEchoChar();
         newEchoChar = newPasswordField.getEchoChar();
 
         // Main panel layout
         setLayout(new BorderLayout());
 
+        // Main page container center
         JPanel page = new JPanel(new GridBagLayout());
         page.setBackground(UI.BG);
 
+        // Styled card for account content
         JPanel card = UI.card();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+
         // Main page title
         JLabel title = UI.h1("Account Settings");
-
         card.add(title);
         UI.space(card, 8);
 
+        // describing panel purpose
         JLabel subtitle = UI.subtle("Manage your account information and password settings.");
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-
         card.add(subtitle);
         UI.space(card, 18);
 
@@ -102,13 +111,15 @@ public class AccountPanel extends JPanel {
         card.add(showPasswords);
         UI.space(card, 8);
 
+        // Check for toggling password visibility
         showPasswords.setOpaque(false);
         showPasswords.setForeground(UI.MUTED);
         showPasswords.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Toggle password visibility
+        // For show/hide behavior
         char oldDefaultEcho = oldPasswordField.getEchoChar();
         char newDefaultEcho = newPasswordField.getEchoChar();
+
         // Ensures password is only visible when checkbox is clicked
         showPasswords.addActionListener(e -> {
             if (showPasswords.isSelected()) {
@@ -137,15 +148,16 @@ public class AccountPanel extends JPanel {
         card.add(Box.createVerticalGlue());
 
         page.add(card);
-
         add(page, BorderLayout.CENTER);
-        // Button actions
+
+        // Connecting buttons to their actions
         saveInfoBtn.addActionListener(e -> saveInfo());
         changePasswordBtn.addActionListener(e -> changePassword());
         deleteBtn.addActionListener(e -> deleteAccount());
         backBtn.addActionListener(e -> app.showChoice());
     }
 
+    // Loads a user's account information into the fields.
     public void loadUser(String username) {
         loadedUser = username;
 
@@ -169,12 +181,16 @@ public class AccountPanel extends JPanel {
         } else {
             accountType.setSelectedItem("Personal");
         }
+
         // Loading current 2FA status into checkbox
         twoFactor.setSelected(account.isTwoFactorEnabled());
+
+        // Clear password fields whenever a user is loaded
         oldPasswordField.setText("");
         newPasswordField.setText("");
     }
 
+    // Saves updated account information
     private void saveInfo() {
         if (loadedUser == null) {
             JOptionPane.showMessageDialog(this, "No user loaded.");
@@ -190,26 +206,28 @@ public class AccountPanel extends JPanel {
 
         boolean wasTwoFactorEnabled = before.isTwoFactorEnabled();
 
-        // Rear update vaules from UI fields
+        // Read updated vaults from the UI fields
         String email = emailField.getText().trim();
         String securityQuestion = (String) this.securityQuestion.getSelectedItem();
         String securityAnswer = securityAnswerField.getText().trim();
-
         String type = ((String) accountType.getSelectedItem()).toLowerCase();
         boolean tfa = twoFactor.isSelected();
 
-        // Basic validation
+        // Basic validation (This prevents empty email submission)
         if (email.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Email cannot be empty.");
             return;
         }
 
+        // Attempt to update account information
         boolean updated = creds.updateAccountInfo(loadedUser, email, type, securityQuestion, securityAnswer, tfa);
+
         if (!updated) {
             JOptionPane.showMessageDialog(this, "Unable to update account information. Check that the email is valid and account type is one of Personal, Business, or Both.");
             return;
         }
 
+        // Reload the updated account to verify the new state
         UserAccount after = creds.getAccount(loadedUser);
         if (after == null) {
             JOptionPane.showMessageDialog(this, "Account was updated, but could not be loaded.");
@@ -238,25 +256,30 @@ public class AccountPanel extends JPanel {
         JOptionPane.showMessageDialog(this, "Account information updated successfully.");
     }
 
+    // Changes the current user's password after verifying the old password
     private void changePassword() {
         if (loadedUser == null) {
             JOptionPane.showMessageDialog(this, "No user loaded.");
             return;
         }
 
-        // Get old and new password values from fields
+        // Read password values from the input fields
         String oldPassword = new String(oldPasswordField.getPassword()).trim();
         String newPassword = new String(newPasswordField.getPassword()).trim();
 
+        // Requires both fields before attempting password change
         if (oldPassword.isEmpty() || newPassword.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Enter both old and new passwords.");
             return;
         }
 
+        // Attempts password update through the credential manager
         if (creds.changePassword(loadedUser, oldPassword, newPassword)) {
+            // Clear password fields after successful update
             oldPasswordField.setText("");
             newPasswordField.setText("");
 
+            // Reset password visibility to hidden mode
             showPasswords.setSelected(false);
             oldPasswordField.setEchoChar(oldEchoChar);
             newPasswordField.setEchoChar(newEchoChar);
@@ -267,6 +290,7 @@ public class AccountPanel extends JPanel {
         }
     }
 
+    // Deletes the currently loaded user account after confirmation
     private void deleteAccount() {
         if (loadedUser == null) {
             JOptionPane.showMessageDialog(this, "No user loaded.");

@@ -18,10 +18,10 @@ public class VaultPanel extends JPanel {
     private final JLabel title = UI.h1("");
     private final JLabel accessStatus = UI.subtle("");
 
-    // Search
+    // Search Box
     private final JTextField searchField = new JTextField(18);
 
-    // List
+    // Password List
     private final DefaultListModel<PasswordEntry> model = new DefaultListModel<>();
     private final JList<PasswordEntry> list = new JList<>(model);
 
@@ -35,7 +35,7 @@ public class VaultPanel extends JPanel {
     private final JButton copyPass   = UI.secondaryButton("Copy Password");
     private final JButton generateBtn = UI.secondaryButton("Generate Password");
 
-    // Scaling
+    // Resizing/Scaling
     private final Dimension baseSize = new Dimension(1000, 700);
     private float lastScale = 1.0f;
 
@@ -73,7 +73,7 @@ public class VaultPanel extends JPanel {
 
         UI.space(left, 12);
 
-        // Search row
+        // Search area
         JPanel searchRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         searchRow.setOpaque(false);
 
@@ -100,7 +100,7 @@ public class VaultPanel extends JPanel {
         top.add(left, BorderLayout.CENTER);
         top.add(right, BorderLayout.EAST);
 
-        // Center card
+        // Center card with saved entries
         JPanel card = UI.card();
         card.setLayout(new BorderLayout(10, 10));
 
@@ -120,7 +120,7 @@ public class VaultPanel extends JPanel {
 
         card.add(scroll, BorderLayout.CENTER);
 
-        // Bottom actions
+        // Bottom actions buttons
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         buttons.setOpaque(false);
 
@@ -142,7 +142,7 @@ public class VaultPanel extends JPanel {
         setLayout(new BorderLayout());
         add(page, BorderLayout.CENTER);
 
-        // Actions
+        // Button Actions
         back.addActionListener(e -> app.showChoice());
         logout.addActionListener(e -> app.showLogin());
 
@@ -164,6 +164,7 @@ public class VaultPanel extends JPanel {
             }
         });
 
+        // Refresh search results while typing
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { refresh(); }
             @Override public void removeUpdate(DocumentEvent e) { refresh(); }
@@ -187,6 +188,7 @@ public class VaultPanel extends JPanel {
             }
         });
 
+        // Set starting scale
         SwingUtilities.invokeLater(() -> {
             int w = getWidth() > 0 ? getWidth() : baseSize.width;
             int h = getHeight() > 0 ? getHeight() : baseSize.height;
@@ -209,6 +211,7 @@ public class VaultPanel extends JPanel {
             return;
         }
 
+        // Show different status messages for business vault
         if ("Business".equalsIgnoreCase(accountType)) {
             if (!account.isBusinessAuthorized()) {
                 title.setText("Business Vault — " + username);
@@ -234,6 +237,7 @@ public class VaultPanel extends JPanel {
         refresh();
     }
 
+    // Reloads the list based on search text
     private void refresh() {
         model.clear();
 
@@ -254,6 +258,7 @@ public class VaultPanel extends JPanel {
         }
     }
 
+    // Turns button on/off based on access level
     private void updatePermissions() {
         boolean canView = canViewBusinessVault();
         boolean canModify = canModifyBusinessVault();
@@ -280,6 +285,7 @@ public class VaultPanel extends JPanel {
         generateBtn.setEnabled(canModify);
     }
 
+    // Checks if user can see business vault entries
     private boolean canViewBusinessVault() {
         if (!"Business".equalsIgnoreCase(type)) {
             return true;
@@ -289,6 +295,7 @@ public class VaultPanel extends JPanel {
         return pm.canAccessBusinessVault(account);
     }
 
+    // Checks if user can change business vault entries
     private boolean canModifyBusinessVault() {
         if (!"Business".equalsIgnoreCase(type)) {
             return true;
@@ -315,7 +322,7 @@ public class VaultPanel extends JPanel {
         repaint();
     }
 
-    // Add new entry
+    // Add a new password entry
     private void addEntry() {
         UserAccount account = creds.getAccount(user);
         if (account == null) {
@@ -362,6 +369,7 @@ public class VaultPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Generated password copied.");
         });
 
+        // Business entries need a group
         if ("Business".equalsIgnoreCase(type)) {
             JTextField groupField = new JTextField();
             UI.styleInput(groupField);
@@ -468,6 +476,7 @@ public class VaultPanel extends JPanel {
         panel.add(pwd);
         panel.add(Box.createVerticalStrut(10));
 
+        // Show business group if this is a business entry
         if ("Business".equalsIgnoreCase(type) && sel.getBusinessGroup() != null) {
             JLabel group = new JLabel("Business Group: " + sel.getBusinessGroup());
             group.setForeground(UI.TEXT);
@@ -707,8 +716,7 @@ public class VaultPanel extends JPanel {
         dialog.setVisible(true);
     }
 
-    // Credit Card
-
+    // Credit Card Manager
     private void showCreditCardsDialog() {
         DefaultListModel<CreditCardEntry> cardModel = new DefaultListModel<>();
         JList<CreditCardEntry> cardList = new JList<>(cardModel);
@@ -975,6 +983,7 @@ public class VaultPanel extends JPanel {
         return "•".repeat(n);
     }
 
+    // Look for password list items
     private static class EntryRenderer extends JPanel implements ListCellRenderer<PasswordEntry> {
         private final JLabel site = new JLabel();
         private final JLabel user = new JLabel();
@@ -995,6 +1004,7 @@ public class VaultPanel extends JPanel {
             add(user);
         }
 
+        // Updates renderer size when UI scales
         void setScale(float scale) {
             site.setFont(site.getFont().deriveFont(Font.BOLD, 14f * scale));
             user.setFont(user.getFont().deriveFont(Font.PLAIN, 12f * scale));

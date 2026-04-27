@@ -6,20 +6,26 @@ import java.util.Map;
 
 public class InviteCodeManager implements Serializable {
     private static final long serialVersionUID = 1L;
+
+    // Stores all invite codes
     private Map<String, InviteCode> codes = new HashMap<>();
 
+    // Code input
     private String normalizeCode(String code) {
         return code == null ? "" : code.trim().toUpperCase();
     }
 
+    // Role input
     private String normalizeRole(String role) {
         return role == null ? "" : role.trim().toLowerCase();
     }
 
+    // Creates a new invite code
     public boolean createCode(String code, String role, List<String> groups, int maxUses) {
         code = normalizeCode(code);
         role = normalizeRole(role);
 
+        // Basic checks
         if (code.isEmpty()) {
             return false;
         }
@@ -28,14 +34,17 @@ public class InviteCodeManager implements Serializable {
             return false;
         }
 
+        // Code must be unique
         if (codes.containsKey(code)) {
             return false;
         }
 
+        // Employee must have at least one group
         if (role.equals("employee") && (groups == null || groups.isEmpty())) {
             return false;
         }
 
+        // Admin don't need groups
         if (role.equals("admin")) {
             groups = new ArrayList<>();
         }
@@ -46,6 +55,7 @@ public class InviteCodeManager implements Serializable {
         return true;
     }
 
+    // Get code by value
     public InviteCode getCode(String code) {
         code = normalizeCode(code);
         if (code.isEmpty()) {
@@ -54,10 +64,12 @@ public class InviteCodeManager implements Serializable {
         return codes.get(code);
     }
 
+    // Checks if code exists
     public boolean codeExists(String code) {
         return getCode(code) != null;
     }
 
+    // Turns a code off
     public boolean deactivateCode(String code) {
         InviteCode inviteCode = getCode(code);
         if (inviteCode == null) {
@@ -69,6 +81,7 @@ public class InviteCodeManager implements Serializable {
         return true;
     }
 
+    // Turns a code back on
     public boolean activateCode(String code) {
         InviteCode inviteCode = getCode(code);
         if (inviteCode == null) {
@@ -80,6 +93,7 @@ public class InviteCodeManager implements Serializable {
         return true;
     }
 
+    // Deletes a code
     public boolean deleteCode(String code) {
         code = normalizeCode(code);
         if (code.isEmpty()) {
@@ -93,21 +107,28 @@ public class InviteCodeManager implements Serializable {
         return false;
     }
 
+    // Returns all invite codes
     public List<InviteCode> getAllCodes() {
         return new ArrayList<>(codes.values());
     }
 
+    // Uses an invite code for an account
     public boolean redeemCode(String code, UserAccount account) {
         InviteCode inviteCode = getCode(code);
+
+        // Check if valid and usable
         if (inviteCode == null || account == null || !inviteCode.canBeUsed()) {
             return false;
         }
 
         String accountType = account.getAccountType();
+
+        // Only business/both accounts can use codes
         if (!"business".equalsIgnoreCase(accountType) && !"both".equalsIgnoreCase(accountType)) {
             return false;
         }
 
+        // Apply role from the invite code
         if ("admin".equalsIgnoreCase(inviteCode.getRole())) {
             account.grantBusinessAdminAccess();
         } else {
@@ -120,6 +141,7 @@ public class InviteCodeManager implements Serializable {
 
     }
 
+    // Saves all invite codes to file
     public void saveToFile() {
         File file = UI.inviteCodesFile();
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
@@ -129,6 +151,7 @@ public class InviteCodeManager implements Serializable {
         }
     }
 
+    // Loads invite codes from file
     public static InviteCodeManager loadFromFile() {
         File file = UI.inviteCodesFile();
         if (!file.exists() || file.length() == 0) {

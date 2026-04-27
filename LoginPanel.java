@@ -9,6 +9,7 @@ public class LoginPanel extends JPanel {
     private final JTextField user = new JTextField(18);
     private final JPasswordField pass = new JPasswordField(18);
 
+    // Login input fields
     public LoginPanel(AppFrame app, Credentials creds) {
         this.app = app;
         this.creds = creds;
@@ -21,6 +22,7 @@ public class LoginPanel extends JPanel {
         JPanel page = new JPanel(new GridBagLayout());
         page.setBackground(UI.BG);
 
+        // Main layout with form on the left and logo on the right 
         JPanel twoCol = new JPanel(new GridLayout(1, 2, 40, 0));
         twoCol.setOpaque(false);
 
@@ -40,12 +42,14 @@ public class LoginPanel extends JPanel {
 
         UI.space(card, 24);
 
+        // Username and password fields
         card.add(UI.row("Username", user));
         UI.space(card, 15);
 
         card.add(UI.row("Password", pass));
         UI.space(card, 10);
 
+        // Checkbox to show or hide password
         JCheckBox showPass = new JCheckBox("Show Password");
         showPass.setOpaque(false);
         showPass.setForeground(UI.MUTED);
@@ -59,18 +63,19 @@ public class LoginPanel extends JPanel {
         card.add(showPass);
         UI.space(card, 16);
 
+        // Buttons under the login form
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         buttons.setOpaque(false);
 
         JButton login = UI.accentButton("Login");
         JButton signup = UI.secondaryButton("Sign Up");
         JButton reset = UI.secondaryButton("Reset");
-        JButton forgotP = UI.secondaryButton("Forgot Password");
+        JButton forgotPassword = UI.secondaryButton("Forgot Password");
 
         buttons.add(login);
         buttons.add(signup);
         buttons.add(reset);
-        buttons.add(forgotP);
+        buttons.add(forgotPassword);
 
         card.add(buttons);
         card.add(Box.createVerticalGlue());
@@ -92,28 +97,30 @@ public class LoginPanel extends JPanel {
         twoCol.add(card);
         twoCol.add(logoPanel);
 
-        page.add(twoCol);
-        
+        page.add(twoCol);        
         add(page, BorderLayout.CENTER);
 
-        // Actions
+        // Button Actions
         login.addActionListener(e -> doLogin());
         signup.addActionListener(e -> doSignUp());
         reset.addActionListener(e -> clear());
-        forgotP.addActionListener(e -> app.showForgotPasswordPanel());
+        forgotPassword.addActionListener(e -> app.showForgotPasswordPanel());
 
-
+        // Pressing Enter in password field logs in
         pass.addActionListener(e -> doLogin());
 
+        // Set login as the default button
         SwingUtilities.invokeLater(() -> {
             JRootPane rp = SwingUtilities.getRootPane(LoginPanel.this);
             if (rp != null) rp.setDefaultButton(login);
         });
     }
 
+    // Loads the logo from resources
     private Icon loadLogoResource(String resourcePath, int targetWidth) {
     java.net.URL url = getClass().getResource(resourcePath);
 
+    // Use text as a fallback if image is missing
     if (url == null) {
         JLabel fallback = new JLabel("MI Encrypt");
         fallback.setForeground(UI.MUTED);
@@ -130,9 +137,11 @@ public class LoginPanel extends JPanel {
     return new ImageIcon(scaled);
 }
 
+// Load the logo from a file path
     private Icon loadLogoFile(String path, int targetWidth) {
         ImageIcon icon = new ImageIcon(path);
 
+        // Use text as a fallback if file doesn't load
         if (icon.getIconWidth() <= 0) {
             JLabel fallback = new JLabel("MI Encrypt");
             fallback.setForeground(UI.MUTED);
@@ -148,6 +157,7 @@ public class LoginPanel extends JPanel {
         return new ImageIcon(scaled);
     }
 
+    // Turns a label into an icon for fallback display
     private Icon fallbackToIcon(JLabel label, int w, int h) {
         label.setSize(w, h);
         Image img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
@@ -157,20 +167,24 @@ public class LoginPanel extends JPanel {
         return new ImageIcon(img);
     }
 
+    // Clears the login fields
     public void clear() {
         user.setText("");
         pass.setText("");
     }
 
+    // Handles login logic
     private void doLogin() {
         String u = user.getText().trim();
         String p = new String(pass.getPassword());
 
+        // Make sure both fields are filled in
         if (u.isEmpty() || p.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Enter both username and password.");
             return;
         }
 
+        // Stop if the account is already locked
         if (creds.isLocked(u)) {
             JOptionPane.showMessageDialog(this, "This account is locked after 3 failed login attempts.");
             return;
@@ -189,7 +203,6 @@ public class LoginPanel extends JPanel {
                 app.showTwoFactorVerify(u);
             } else {   
                 // No 2FA — proceed straight to the app
-                SessionManager.startSession(u);
                 app.setCurrentUser(u);
                 JOptionPane.showMessageDialog(this, "Welcome to MI Encrypt, " + u + "   !");
                 app.showChoice();
@@ -197,11 +210,13 @@ public class LoginPanel extends JPanel {
             return;
         }
 
+        // Show lock message if too many failed attempts
         if (creds.isLocked(u)) {
             JOptionPane.showMessageDialog(this, "This account has been locked after 3 failed login attempts.");
             return;
         }
 
+        // Show error message for wrong login
         UserAccount account = creds.getAccount(u);
         if (account == null) {
             JOptionPane.showMessageDialog(this, "Username not found.");
@@ -210,6 +225,8 @@ public class LoginPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Incorrect password. Attempts remaining: " + remaining);
         }
     }
+    
+    // Open the sign up screen
     private void doSignUp() {
         app.showSignUp();
     }

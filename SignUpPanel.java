@@ -6,16 +6,18 @@ public class SignUpPanel extends JPanel {
     private final Credentials creds;
     private final InviteCodeManager inviteCodeManager;
 
+    // Sign up fields
     private final JTextField user = new JTextField(24);
     private final JPasswordField pass = new JPasswordField(24);
     private final JTextField email = new JTextField(24);
     private final JTextField securityAnswer = new JTextField(24);
     private final JCheckBox twoFactor = new JCheckBox("Enable Two-Factor Authentication");
 
-
+    // Dropdowns for account type and security question
     private final JComboBox<String> accountType = new JComboBox<>(new String[] {"Personal", "Business", "Both"});
     private final JComboBox<String> securityQuestion = new JComboBox<>(new String[] {"What is your mother's maiden name?", "What was the name of your first pet?", "What was the make of your first car?", "What city were you born in?"});
     
+    // Invite code field for business accounts
     private final JTextField inviteCode = new JTextField(24);
     private final JLabel inviteHelp = UI.subtle("For Business or Both accounts, enter your invite code to receive business access.");
 
@@ -51,7 +53,7 @@ public class SignUpPanel extends JPanel {
 
         UI.space(card, 24);
 
-
+        // Main input fields
         card.add(UI.row("Username", user));
         UI.space(card, 14);
 
@@ -77,6 +79,7 @@ public class SignUpPanel extends JPanel {
         card.add(inviteHelp);
         UI.space(card, 14);
 
+        // 2FA option
         twoFactor.setOpaque(false);
         twoFactor.setForeground(UI.MUTED);
         twoFactor.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -112,6 +115,7 @@ public class SignUpPanel extends JPanel {
         updateInviteControls();
     }
 
+    // Clears all form fields
     public void clear() {
         user.setText("");
         pass.setText("");
@@ -124,6 +128,7 @@ public class SignUpPanel extends JPanel {
         updateInviteControls();
     }
 
+    // Only enables invite code for business/both accounts
     private void updateInviteControls() {
         String type = ((String) accountType.getSelectedItem()).toLowerCase();
         boolean businessType = "business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type);
@@ -148,6 +153,7 @@ public class SignUpPanel extends JPanel {
         String securityA = securityAnswer.getText().trim();
         String code = inviteCode.getText().trim();
 
+        // Makes sure required fields are filled in
         if (u.isEmpty() || p.isEmpty() || e.isEmpty() || securityQ.isEmpty() || securityA.isEmpty()) { //securityQ.isEmpty() should never be true since it's a dropdown, but we'll check just in case
             JOptionPane.showMessageDialog(this, "All fields are required.");
             return;
@@ -155,12 +161,14 @@ public class SignUpPanel extends JPanel {
 
         boolean created;
         
+        // Try creating the account
         if (("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) && !code.isEmpty()) {
             created = creds.signUp(u, p, e, type, securityQ, securityA, tfa, code, inviteCodeManager);
         } else {
             created = creds.signUp(u, p, e, type, securityQ, securityA, tfa, "", inviteCodeManager);
         }
 
+        // Show error if sign up failed
         if (!created) {
             if (("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) && !code.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Failed to create account. The invite code may be invalid or already used.");
@@ -177,6 +185,7 @@ public class SignUpPanel extends JPanel {
             return;
         }
 
+        // If 2FA is on, go to setup screen
         if (account.isTwoFactorEnabled()) {
             String secret = account.getTotpSecret();
 
@@ -195,6 +204,7 @@ public class SignUpPanel extends JPanel {
 
             app.showTwoFactorSetup(u, secret);
         } else {
+            // If no 2FA, finish sign up normally
             if (account.isBusinessAuthorized()) {
                 JOptionPane.showMessageDialog(this, "Account created successfully and business access was assigned.");
             } else if ("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) {

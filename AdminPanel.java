@@ -9,39 +9,70 @@ import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 
 public class AdminPanel extends JPanel {
+    // Main application frame so this panel can switch screen
     private final AppFrame app;
+    // Handles user account data and login/business permission updates
     private final Credentials creds;
+    // Manages creation, storage, activation, and deletion of invite codes
     private final InviteCodeManager inviteCodeManager;
+    // Stores the currently logged-in user
     private UserAccount currentUser;
 
     // User list components
+
+    // Model that stores usernames shown in the user list
     private final DefaultListModel<String> userModel = new DefaultListModel<>();
+    // List displaying business users
     private final JList<String> userList = new JList<>(userModel);
 
     // User details components
+
+    // Label showing which user is currently selected
     private final JLabel selectedUserLabel = new JLabel("No user selected");
+    // Checkbox for enabling/disabling business authorization
     private final JCheckBox authorizedBox = new JCheckBox("Business Authorized");
+    // Dropdown for user role
     private final JComboBox<String> roleBox = new JComboBox<>(new String[]{"employee", "admin"});
+    // Checkboxes for assigning employee groups
     private final JCheckBox salesBox = new JCheckBox("Sales");
     private final JCheckBox hrBox = new JCheckBox("HR");
 
     // Action buttons
+
+    // Save user changes
     private final JButton saveBtn = UI.accentButton("Save Changes");
+    // Return to the previous screen
     private final JButton backBtn = UI.secondaryButton("Back");
+    // Refreshes users and invite codes
     private final JButton refreshBtn = UI.secondaryButton("Refresh");
 
+    // Invite Code Creation Components
+
+    // Text field for entering a new invite code
     private final JTextField inviteCodeField = new JTextField(12);
+    // Dropdown for selecting the role assigned by the invite code
     private final JComboBox<String> inviteRoleBox = new JComboBox<>(new String[]{"employee", "admin"});
+    // Checkboxes for assigning groups to employee invite codes
     private final JCheckBox inviteSalesBox = new JCheckBox("Sales");
     private final JCheckBox inviteHRBox = new JCheckBox("HR");
+    // Spinner for setting maximum number of uses for an invite code
     private final JSpinner maxUsesSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
+    // Button to auto-generate a readable invite code
     private final JButton generateCodeBtn = UI.secondaryButton("Generate Invite Code");
+    // Button to create/save the invite code
     private final JButton createInviteBtn = UI.accentButton("Create Invite Code");
 
+    // Invite Code List Components 
+
+    // Model storing invite code display strings
     private final DefaultListModel<String> inviteModel = new DefaultListModel<>();
+    // List displaying all existing invite codes
     private final JList<String> inviteList = new JList<>(inviteModel);
+    // Button to activate or deactivate a selected invite code
     private final JButton deactivateInviteBtn = UI.secondaryButton("Deactivate Selected Code");
+    // Button to permanently delete a selected invite code
     private final JButton deleteInviteBtn = UI.deleteButton("Delete Selected Code");
+    // Button to reload invite code list
     private final JButton refreshInvitesBtn = UI.secondaryButton("Refresh Invite Codes");
 
     public AdminPanel(AppFrame app, Credentials creds, UserAccount currentUser) {
@@ -50,7 +81,10 @@ public class AdminPanel extends JPanel {
         this.currentUser = currentUser;
         this.inviteCodeManager = InviteCodeManager.loadFromFile();
 
+        // Apply consistent styles to inputs, lists, and buttons
         styleComponents();
+
+        // Set custom renderers for the user list and invite code list
         userList.setCellRenderer(new UserListRenderer());
         inviteList.setCellRenderer(new InviteListRenderer());
 
@@ -77,6 +111,7 @@ public class AdminPanel extends JPanel {
 
         add(top, BorderLayout.NORTH);
 
+        // Tabbed interface for user management and invite code management
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setBackground(UI.CARD);
         tabbedPane.setForeground(UI.TEXT);
@@ -84,14 +119,17 @@ public class AdminPanel extends JPanel {
         tabbedPane.addTab("Invite Codes", createInviteTab());
         add(tabbedPane, BorderLayout.CENTER);
 
+        // Refresh both users and invite codes
         refreshBtn.addActionListener(e -> {
             loadBusinessUsers();
             loadInviteCodes();
             updateActionStates();
         });
 
+        // Return to previous screen
         backBtn.addActionListener(e -> app.showChoice());
 
+        // When a user is selected, load that user's details into the form 
         userList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 loadSelectedUser();
@@ -99,57 +137,70 @@ public class AdminPanel extends JPanel {
             }
         });
 
+        // Save changes for the selected user
         saveBtn.addActionListener(e -> saveSelectedUser());
 
+        // Update controls when authorization state changes
         authorizedBox.addActionListener(e -> { 
             updateUserControls();
             updateActionStates();
         });
 
+        // Update controls when role changes
         roleBox.addActionListener(e -> {
             updateUserControls();
             updateActionStates();
         });
 
+        // Update invite controls when invite role changes
         inviteRoleBox.addActionListener(e -> {
             updateInviteControls();
             updateActionStates();
         });
         
+        // Update button availability when invite code text changes
         inviteCodeField.getDocument().addDocumentListener(new SimpleDocumentListener(this::updateActionStates));
 
+        // Geneerate a radom invite code
         generateCodeBtn.addActionListener(e -> {
             generateInviteCode();
             updateActionStates();
         });
 
+        // Create a new invite code
         createInviteBtn.addActionListener(e -> {
             createInviteCode();
             updateActionStates();
         });
 
+        // Reload the invite code list
         refreshInvitesBtn.addActionListener(e -> {
             loadInviteCodes();
             updateActionStates();
         });
 
+        // Activate/deactivate selected invite code
         deactivateInviteBtn.addActionListener(e -> {
             toggleSelectedInviteActiveState();
             updateActionStates();
         });
 
+        // Delete selected invite code
         deleteInviteBtn.addActionListener(e -> {
             deleteSelectedInvite();
             updateActionStates();
         });
 
+        // Shortcuts
         installKeyboardShortcuts();
 
+        // Initialize control states
         updateUserControls();
         updateInviteControls();
         updateActionStates();
     }
 
+    // Applies shared styling to text fields
     private void styleComponents() {
         UI.styleInput(inviteCodeField);
         UI.styleInput(roleBox);
@@ -170,6 +221,7 @@ public class AdminPanel extends JPanel {
         maxUsesSpinner.setBackground(new Color(34, 34, 40));
         maxUsesSpinner.setForeground(UI.TEXT);
 
+        // Style the spinner text field editor
         JComponent editor = maxUsesSpinner.getEditor();
         if (editor instanceof JSpinner.DefaultEditor) {
             JSpinner.DefaultEditor spinnerEditor = (JSpinner.DefaultEditor) editor;
@@ -183,6 +235,7 @@ public class AdminPanel extends JPanel {
                 ));
         }
 
+        // Standard button sizes
         Dimension mainBtn = new Dimension(170, 38);
         saveBtn.setPreferredSize(mainBtn);
         refreshBtn.setPreferredSize(mainBtn);
@@ -198,6 +251,7 @@ public class AdminPanel extends JPanel {
         syncButtonColors();
     }
 
+    // Applies consistent styling to list components
     private void styleList(JList<String> list) {
         list.setBackground(UI.CARD);
         list.setForeground(UI.TEXT);
@@ -207,12 +261,14 @@ public class AdminPanel extends JPanel {
         list.setBorder(new EmptyBorder(6, 6, 6, 6));
     }
 
+    // Applies shared styling to checkboxes
     private void styleCheckBox(JCheckBox box) {
         box.setOpaque(false);
         box.setForeground(UI.TEXT);
         box.setFocusPainted(false);
     }
 
+    // Creates a titled border used for sections of the admin panel
     private TitledBorder createSectionBorder(String title) {
         TitledBorder border = BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(UI.BORDER, 1, true),
@@ -223,7 +279,7 @@ public class AdminPanel extends JPanel {
         return border;
     }
 
-
+    // Build the tab for manging business users
     private JPanel createUsersTab() {
         JPanel panel = new JPanel(new BorderLayout(12, 12));
         panel.setBackground(UI.BG);
@@ -231,6 +287,7 @@ public class AdminPanel extends JPanel {
 
         userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
+        // Left side: user list
         JScrollPane leftScroll = new JScrollPane(userList);
         leftScroll.setPreferredSize(new Dimension(220, 400));
         leftScroll.setBackground(UI.CARD);
@@ -238,7 +295,7 @@ public class AdminPanel extends JPanel {
         leftScroll.setViewportBorder(null);
         leftScroll.setBorder(createSectionBorder("Business Users"));
     
-
+        // Right side: selected user details
         JPanel right = new JPanel();
         right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
         right.setBackground(UI.CARD);
@@ -274,7 +331,7 @@ public class AdminPanel extends JPanel {
 
         saveBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Right Side Layout
+        // Arranging right-side components
         right.add(selectedUserLabel);
         right.add(Box.createVerticalStrut(14));
         right.add(authorizedBox);
@@ -286,6 +343,7 @@ public class AdminPanel extends JPanel {
         right.add(Box.createVerticalGlue());
         right.add(saveBtn);
 
+        // Split pane separates the user list and detail editor
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftScroll, right);
         split.setDividerLocation(220);
         split.setBorder(null);
@@ -295,11 +353,14 @@ public class AdminPanel extends JPanel {
         panel.add(split, BorderLayout.CENTER);
         return panel;
     }
+
+    // Builds the tab for creating and managing invite codes
     private JPanel createInviteTab() {
         JPanel panel = new JPanel(new BorderLayout(12, 12));
         panel.setBackground(UI.BG);
         panel.setOpaque(true);
 
+        // Top form for creating a new invite code
         JPanel formPanel = new JPanel();
         formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
         formPanel.setBackground(UI.CARD);
@@ -359,6 +420,7 @@ public class AdminPanel extends JPanel {
 
         inviteList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
+        // Bottom section showing existing invite codes
         JScrollPane inviteScroll = new JScrollPane(inviteList);
         inviteScroll.setBackground(UI.CARD);
         inviteScroll.getViewport().setBackground(UI.CARD);
@@ -385,6 +447,7 @@ public class AdminPanel extends JPanel {
         return panel;
     }
 
+    // Loads the panel for a specific user and verifies admin access
     public void load(String currentUsername) {
         this.currentUser = creds.getAccount(currentUsername);
 
@@ -401,6 +464,7 @@ public class AdminPanel extends JPanel {
         loadBusinessUsers();
         loadInviteCodes();
 
+        // Auto-select the first valid user if available
         if (!userModel.isEmpty () && !isPlaceholderValue(userModel.getElementAt(0))) {
             userList.setSelectedIndex(0);
         }
@@ -408,6 +472,7 @@ public class AdminPanel extends JPanel {
         updateActionStates();
     }
 
+    // Clears the current user selection and resets user detail fields
     private void clearUserSelection() {
         userList.clearSelection();
         selectedUserLabel.setText("No user selected");
@@ -418,6 +483,7 @@ public class AdminPanel extends JPanel {
         updateUserControls();
     }
 
+    // Loads all users who have business or both account access types
     private void loadBusinessUsers() {
         userModel.clear();
 
@@ -430,11 +496,13 @@ public class AdminPanel extends JPanel {
             }
         }
 
+        // Show placeholder text if no user exist
         if (userModel.isEmpty()) {
             userModel.addElement("No business users available");
         }
     }
 
+    // Loads the selected user's details into the from controls
     private void loadSelectedUser() {
         String username = userList.getSelectedValue();
         if (username == null || isPlaceholderValue(username)) {
@@ -448,20 +516,20 @@ public class AdminPanel extends JPanel {
             return;
         }
 
-        // Update UI fields based on selected user's current settings
+        // Update label and checkboxes based on selected account
         selectedUserLabel.setText("Selected User: " + account.getUsername());
 
         boolean authorized = account.isBusinessAuthorized();
         authorizedBox.setSelected(authorized);
 
-        // Load Role
+        // Default empty or invalid roles to employee
         String role = account.getBusinessRole();
         if (role == null || role.isBlank() || "none".equalsIgnoreCase(role)) {
             role = "employee";
         }
         roleBox.setSelectedItem(role.toLowerCase());
 
-        // Load group checkboxes based on user's allowed business groups
+        // Load the user's business groups
         List<String> groups = account.getAllowedBusinessGroups();
         salesBox.setSelected(containsIgnoreCase(groups, "Sales"));
         hrBox.setSelected(containsIgnoreCase(groups, "HR"));
@@ -469,6 +537,7 @@ public class AdminPanel extends JPanel {
         updateUserControls();
     }
 
+    // Saves changes made to the selected user's business permissions and groups
     private void saveSelectedUser() {
         String username = userList.getSelectedValue();
         if (username == null || isPlaceholderValue(username)) {
@@ -478,7 +547,7 @@ public class AdminPanel extends JPanel {
 
         boolean authorized = authorizedBox.isSelected();
 
-
+        // If business access is removed ,update and stop here
         if (!authorized) {
             creds.setBusinessAccess(username, false);
             JOptionPane.showMessageDialog(this, "User " + username + " is no longer authorized for business access.");
@@ -493,11 +562,13 @@ public class AdminPanel extends JPanel {
             return;
         }
 
+        // Employeee must belong to at least one group
         if ("employee".equalsIgnoreCase(role) && !salesBox.isSelected() && !hrBox.isSelected()) {
             JOptionPane.showMessageDialog(this, "Employee must belong to at least one group.");
             return;
         }
 
+        // Update access, role, and groups
         creds.setBusinessAccess(username, true);
         creds.setBusinessRole(username, role);
         creds.clearBusinessGroups(username);
@@ -516,6 +587,7 @@ public class AdminPanel extends JPanel {
         updateActionStates();
     }
 
+    // Enables or disables role/group controls based on authorization and selected role
     private void updateUserControls() {
         boolean authorized = authorizedBox.isSelected();
         String role = (String) roleBox.getSelectedItem();
@@ -526,11 +598,14 @@ public class AdminPanel extends JPanel {
         salesBox.setEnabled(employeeMode);
         hrBox.setEnabled(employeeMode);
 
+        // Clear group selection if user is not an authorized employee 
         if (!employeeMode) {
             salesBox.setSelected(false);
             hrBox.setSelected(false);
         }
     }
+
+    // Enables or disables invite group checkboxes depending on selected inivte role
     private void updateInviteControls() {
         String role = (String) inviteRoleBox.getSelectedItem();
         boolean employeeMode = "employee".equalsIgnoreCase(role);
@@ -538,12 +613,14 @@ public class AdminPanel extends JPanel {
         inviteSalesBox.setEnabled(employeeMode);
         inviteHRBox.setEnabled(employeeMode);
 
+        // Clear group selection if the invite is not for an employee
         if (!employeeMode) {
             inviteSalesBox.setSelected(false);
             inviteHRBox.setSelected(false);
         }
     }
 
+    // Updates button enabled/disabled states based on current selections and form input
     private void updateActionStates() {
         String selectedUser = userList.getSelectedValue();
         boolean validUserSelected = selectedUser != null && !isPlaceholderValue(selectedUser);
@@ -555,6 +632,7 @@ public class AdminPanel extends JPanel {
         deactivateInviteBtn.setEnabled(validInviteSelected);
         deleteInviteBtn.setEnabled(validInviteSelected);
 
+        // Change button text depending on whether the selected invite is active
         if  (validInviteSelected) {
             if (selectedInvite.endsWith("| ACTIVE")) {
                 deactivateInviteBtn.setText("Deactivate Selected Code");
@@ -567,6 +645,7 @@ public class AdminPanel extends JPanel {
             deactivateInviteBtn.setText("Deactivate Selected Code");
         }
 
+        // Only allow invite creation when required fields are valid
         String role = (String) inviteRoleBox.getSelectedItem();
         boolean employeeRole = "employee".equalsIgnoreCase(role);
 
@@ -579,6 +658,7 @@ public class AdminPanel extends JPanel {
         syncButtonColors();
     }
 
+    // Enabled/disabled colors to all buttons
     private void syncButtonColors() {
         applyButtonState(saveBtn, UI.ACCENT);
         applyButtonState(refreshBtn, UI.SECONDARYACCENT);
@@ -590,6 +670,7 @@ public class AdminPanel extends JPanel {
         applyButtonState(deleteInviteBtn, UI.DELETE);
     }
 
+    // Applies the correct background/foreground colors depending on whether a button is enabled.
     private void applyButtonState(JButton button, Color enabledColor) {
         if (button.isEnabled()) {
             button.setBackground(enabledColor);
@@ -600,6 +681,7 @@ public class AdminPanel extends JPanel {
         }
     }
 
+    // Adds Keyboard shortcuts: (Enter = save changes, ESCAPE = go back)    
     private void installKeyboardShortcuts() {
         InputMap inputMap = getInputMap(WHEN_IN_FOCUSED_WINDOW);
         ActionMap actionMap = getActionMap();
@@ -623,14 +705,17 @@ public class AdminPanel extends JPanel {
         });
     }
 
+    // Generates and palce a random invite code into the invite code text field
     private void generateInviteCode() {
         inviteCodeField.setText(generateReadableInviteCode());
     }
 
+    // Create invite in a specific format
     private String generateReadableInviteCode() {
         return generateInvitePart(4) + "-" + generateInvitePart(4);
     }
 
+    // Generates one seciton of an invite code using readable letters and numbers
     private String generateInvitePart(int length) {
         String chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
         StringBuilder sb = new StringBuilder();
@@ -643,6 +728,7 @@ public class AdminPanel extends JPanel {
         return sb.toString();
     }
 
+    // Creates a new invite code using the data entered in the invite form
     private void createInviteCode() {
         String code = inviteCodeField.getText().trim();
         String role = (String) inviteRoleBox.getSelectedItem();
@@ -653,6 +739,7 @@ public class AdminPanel extends JPanel {
             return;
         }
 
+        // Collect selected groups
         List<String> groups = new ArrayList<>();
         if ("employee".equalsIgnoreCase(role)) {
             if (inviteSalesBox.isSelected()) {
@@ -662,16 +749,20 @@ public class AdminPanel extends JPanel {
                 groups.add("HR");
             }
 
+            // Employees must have at least one group
             if (groups.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Employee invite codes need at least one group.");
                 return;
             }
         }
 
+        // Create the code
         boolean success = inviteCodeManager.createCode(code, role, groups, maxUses);
 
         if (success) {
             JOptionPane.showMessageDialog(this, "Invite code created: " + code);
+ 
+            // Reset form
             inviteCodeField.setText("");
             inviteRoleBox.setSelectedItem("employee");
             inviteSalesBox.setSelected(false);
@@ -686,6 +777,7 @@ public class AdminPanel extends JPanel {
         updateActionStates();
     }
 
+    // Invite code into the invite list
     private void loadInviteCodes() {
         inviteModel.clear();
 
@@ -696,6 +788,7 @@ public class AdminPanel extends JPanel {
             }
         }
 
+        // Show placeholder if there are no invite codes
         if (inviteModel.isEmpty()) {
             inviteModel.addElement("No invite codes created yet");
         }
@@ -704,6 +797,7 @@ public class AdminPanel extends JPanel {
         updateActionStates();
     }
 
+    // Formats an invite code into a readable display string for the list
     private String formatInviteCodeDisplay(InviteCode code) {
         String status = code.isActive() ? "ACTIVE" : "INACTIVE";
         String groups = code.getGroups().isEmpty() ? "All" : String.join(",", code.getGroups());
@@ -715,6 +809,7 @@ public class AdminPanel extends JPanel {
                 + " | " + status;
     }
 
+    // Extracts just the invite code valut from the selcted display string
     private String getSelectedInviteCodeValue() {
         String selected = inviteList.getSelectedValue();
         if (selected == null || selected.isBlank() || isPlaceholderValue(selected)) {
@@ -729,6 +824,7 @@ public class AdminPanel extends JPanel {
         return selected.substring(0, separator).trim();
     }
 
+    // Toggles the selected invite code between active and inactive
     private void toggleSelectedInviteActiveState() {
         String code = getSelectedInviteCodeValue();
         if (code == null) {
@@ -758,6 +854,7 @@ public class AdminPanel extends JPanel {
         }
     }
     
+    // Deletes the selected invite code after confirmation
     private void deleteSelectedInvite() {
         String code = getSelectedInviteCodeValue();
         if (code == null) {
@@ -784,17 +881,20 @@ public class AdminPanel extends JPanel {
         }
     }
 
+    // Returns true if the selected invite code is currently active
     private boolean isSelectedInviteActive() {
         String selected = inviteList.getSelectedValue();
         return selected != null && selected.endsWith("| ACTIVE");
     }
 
+    // Check if a list item is just a placeholder message instead of real data
     private boolean isPlaceholderValue(String value) {
         return value != null
                 && (value.equals("No business users available")
                 || value.equals("No invite codes created yet"));
     }
 
+    // Return true if the given list contains the target value, ignoring letter case
     private boolean containsIgnoreCase(List<String> list, String value) {
         if (list == null || value == null) {
             return false;
@@ -809,6 +909,7 @@ public class AdminPanel extends JPanel {
         return false;
     }
 
+    // Styles placeholder entries differently from normal usernames
     private class UserListRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -830,6 +931,7 @@ public class AdminPanel extends JPanel {
         }
     }
 
+    // Active codes and inactive codes are shown in differnet colors
     private class InviteListRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -858,6 +960,7 @@ public class AdminPanel extends JPanel {
         }
     }
 
+    //  Helper class for document change events
     private static class SimpleDocumentListener implements javax.swing.event.DocumentListener {
         private final Runnable callback;
 
