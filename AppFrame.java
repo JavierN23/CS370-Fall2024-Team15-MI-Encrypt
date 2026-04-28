@@ -68,12 +68,11 @@ public class AppFrame extends JFrame {
         showLogin();
         setVisible(true);
 
-         Toolkit.getDefaultToolkit().addAWTEventListener(event -> {
+        Toolkit.getDefaultToolkit().addAWTEventListener(event -> {
             SessionManager.updateActivity();
         }, AWTEvent.MOUSE_EVENT_MASK
                 | AWTEvent.MOUSE_MOTION_EVENT_MASK
                 | AWTEvent.KEY_EVENT_MASK);
-        
     }
 
     // Loads the app icon from resources

@@ -1,6 +1,8 @@
 import java.util.UUID;
 import javax.swing.JOptionPane;
 import javax.swing.Timer;
+import javax.swing.*;
+import java.awt.*;
 
 public class SessionManager {
 
@@ -9,7 +11,7 @@ public class SessionManager {
     private static String sessionId;
     private static long lastActivityTime;
 
-    private static final long TIMEOUT = 90 * 1000; // 90 seconds
+    private static final long TIMEOUT = 10 * 1000; // 90 seconds
 
     private static Timer sessionTimer;
 
@@ -97,8 +99,21 @@ public class SessionManager {
         sessionTimer = new Timer(1000, e -> {
             if (currentUser != null && isExpired()) {
                 endSession();
-                JOptionPane.showMessageDialog(null, "Session expired due to inactivity. Please log in again.");
-                app.showLogin();
+
+                SwingUtilities.invokeLater(() -> {
+
+                    for (Window window : Window.getWindows()) {
+                        if (window instanceof JDialog) {
+                            window.dispose();
+                        }
+                    }
+                    JOptionPane.showMessageDialog(
+                            null,
+                            "Session expired due to inactivity. Please log in again."
+                    );
+
+                    app.showLogin();
+                });
             }
         });
 

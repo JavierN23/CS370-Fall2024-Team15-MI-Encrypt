@@ -145,12 +145,25 @@ public class VaultPanel extends JPanel {
         // Button Actions
         back.addActionListener(e -> app.showChoice());
         logout.addActionListener(e -> app.showLogin());
+        add.addActionListener(e -> {
+            if (!SessionManager.validateSession(app)) return;
+            addEntry();
+        });
 
-        add.addActionListener(e -> addEntry());
-        view.addActionListener(e -> viewEntry());
-        edit.addActionListener(e -> editEntry()); // editEntry saves
-        del.addActionListener(e -> deleteEntry());
+        view.addActionListener(e -> {
+            if (!SessionManager.validateSession(app)) return;
+            viewEntry();
+        });
 
+        edit.addActionListener(e -> {
+            if (!SessionManager.validateSession(app)) return;
+            editEntry();
+        });
+
+        del.addActionListener(e -> {
+            if (!SessionManager.validateSession(app)) return;
+            deleteEntry();
+        });
         copyUser.addActionListener(e -> copySelectedUsername());
         copyPass.addActionListener(e -> copySelectedPassword());
         generateBtn.addActionListener(e -> showGeneratedPasswordDialog());
@@ -326,6 +339,7 @@ public class VaultPanel extends JPanel {
 
     // Add a new password entry
     private void addEntry() {
+        if (!SessionManager.validateSession(app)) return;
         UserAccount account = creds.getAccount(user);
         if (account == null) {
             JOptionPane.showMessageDialog(this, "User account not found.");
@@ -384,7 +398,7 @@ public class VaultPanel extends JPanel {
 
             int ok = JOptionPane.showConfirmDialog(this, msg, "Add Entry", JOptionPane.OK_CANCEL_OPTION);
             if (ok != JOptionPane.OK_OPTION) return;
-
+            if (!SessionManager.validateSession(app)) return;
             String s = site.getText().trim();
             String un = u.getText().trim();
             String pw = new String(p.getPassword()).trim();
