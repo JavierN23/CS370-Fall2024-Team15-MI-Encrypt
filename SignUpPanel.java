@@ -21,6 +21,8 @@ public class SignUpPanel extends JPanel {
     private final JTextField inviteCode = new JTextField(24);
     private final JLabel inviteHelp = UI.subtle("For Business or Both accounts, enter your invite code to receive business access.");
 
+    private final JLabel strengthLabel = UI.subtle("Strength: ");
+
     public SignUpPanel(AppFrame app, Credentials creds) {
         this.app = app;
         this.creds = creds;
@@ -103,7 +105,6 @@ public class SignUpPanel extends JPanel {
         card.add(Box.createVerticalGlue());
 
         page.add(card);
-
         add(page, BorderLayout.CENTER);
 
         // Button actions
@@ -113,6 +114,20 @@ public class SignUpPanel extends JPanel {
 
         accountType.addActionListener(e -> updateInviteControls());
         updateInviteControls();
+
+        pass.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                updateStrength();
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                updateStrength();
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                updateStrength();
+            }
+        });
     }
 
     // Clears all form fields
@@ -126,6 +141,37 @@ public class SignUpPanel extends JPanel {
         securityAnswer.setText("");
         twoFactor.setSelected(false);
         updateInviteControls();
+
+        strengthLabel.setText("Strength: ");
+        strengthLabel.setForeground(UI.MUTED);
+
+        updateInviteControls();
+    }
+
+    private void updateStrength() {
+        String p = new String(pass.getPassword());
+
+        if (p.isEmpty()) {
+            strengthLabel.setText("Strenght: ");
+            strengthLabel.setForeground(UI.MUTED);
+            return;
+        }
+
+        String label = PasswordStrengthChecker.getStrengthLabel(p);
+        strengthLabel.setText("Strength: " + label);
+
+        switch (label) {
+            case "Weak":
+                strengthLabel.setForeground(Color.RED);
+                break;
+            case "Medium":
+                strengthLabel.setForeground(Color.ORANGE);
+                break;
+            default:
+                strengthLabel.setForeground(new Color(0, 150, 0));
+                break;
+
+        }
     }
 
     // Only enables invite code for business/both accounts
@@ -159,6 +205,10 @@ public class SignUpPanel extends JPanel {
             return;
         }
 
+        if (PasswordStrengthChecker.isWeak(p)) {
+            JOptionPane.showMessageDialog(this, "Password is too weak. Use at least 8 characters with uppercase, lowercase, number, and symbol.");
+            return;
+        }
         boolean created;
         
         // Try creating the account

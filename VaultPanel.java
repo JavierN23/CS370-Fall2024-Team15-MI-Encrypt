@@ -272,12 +272,14 @@ public class VaultPanel extends JPanel {
             copyUser.setEnabled(true);
             copyPass.setEnabled(true);
             generateBtn.setEnabled(true);
+            creditCardsBtn.setEnabled(true);
             return;
         }
         
         view.setEnabled(canView);
         copyUser.setEnabled(canView);
         copyPass.setEnabled(canView);
+        creditCardsBtn.setEnabled(canView);
 
         add.setEnabled(canModify);
         edit.setEnabled(canModify);
@@ -718,6 +720,15 @@ public class VaultPanel extends JPanel {
 
     // Credit Card Manager
     private void showCreditCardsDialog() {
+        boolean isBusinessVault = "Business".equalsIgnoreCase(type);
+        boolean canView = !isBusinessVault || canViewBusinessVault();
+        boolean canModify = !isBusinessVault || canModifyBusinessVault();
+
+        if (!canView) {
+            JOptionPane.showMessageDialog(this, "You don't have permission to view business credit cards.");
+            return;
+        }
+
         DefaultListModel<CreditCardEntry> cardModel = new DefaultListModel<>();
         JList<CreditCardEntry> cardList = new JList<>(cardModel);
 
@@ -769,6 +780,10 @@ public class VaultPanel extends JPanel {
         JButton delCardBtn   = UI.deleteButton("Delete");
         JButton closeBtn     = UI.secondaryButton("Close");
 
+        addCardBtn.setEnabled(canModify);
+        copyNumBtn.setEnabled(canModify);
+        delCardBtn.setEnabled(canModify);        
+
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         btnRow.setOpaque(false);
         btnRow.add(addCardBtn);
@@ -814,6 +829,11 @@ public class VaultPanel extends JPanel {
         });
 
         copyNumBtn.addActionListener(e -> {
+            if (!canModify) {
+                JOptionPane.showMessageDialog(dialog, "Only admins can copy business card numbers.");
+                return;
+            }
+
             CreditCardEntry sel = cardList.getSelectedValue();
             if (sel == null) { JOptionPane.showMessageDialog(dialog, "Select a card first."); return; }
             copyToClipboard(sel.getCardNumber());
@@ -821,6 +841,11 @@ public class VaultPanel extends JPanel {
         });
 
         delCardBtn.addActionListener(e -> {
+            if (!canModify) {
+                JOptionPane.showMessageDialog(dialog, "Select a card first");
+                return;
+            }
+
             CreditCardEntry sel = cardList.getSelectedValue();
             if (sel == null) { JOptionPane.showMessageDialog(dialog, "Select a card first."); return; }
             int ok = JOptionPane.showConfirmDialog(dialog,
@@ -840,6 +865,11 @@ public class VaultPanel extends JPanel {
     // Dialog to enter and save a new credit card
     private void addCreditCard(DefaultListModel<CreditCardEntry> model,
                                JLabel countLabel, JDialog parent) {
+        if ("Business".equalsIgnoreCase(type) && !canModifyBusinessVault()) {
+            JOptionPane.showMessageDialog(parent, "Only admins can add business credit cards. ");
+            return;
+        }
+
         JTextField nickname = new JTextField();
         JTextField holderName = new JTextField();
         JTextField cardNumber = new JTextField();
@@ -928,10 +958,19 @@ public class VaultPanel extends JPanel {
         JLabel dateL = new JLabel("Added:  " + card.getDateAdded());
         dateL.setForeground(UI.MUTED);
 
+        boolean canReveal = !"Business".equalsIgnoreCase(type) || canModifyBusinessVault();
+
         JCheckBox revealBox = new JCheckBox("Reveal card number and CVV");
         revealBox.setOpaque(false);
         revealBox.setForeground(UI.MUTED);
+        revealBox.setEnabled(canReveal);
+
         revealBox.addActionListener(e -> {
+            if (!canReveal) {
+                revealBox.setSelected(false);
+                return;
+            }
+
             if (revealBox.isSelected()) {
                 numL.setText("Card Number:  " + card.getCardNumber());
                 cvvL.setText("CVV:  " + card.getCVV());
@@ -943,7 +982,14 @@ public class VaultPanel extends JPanel {
 
         JButton copyNumBtn = UI.secondaryButton("Copy Number");
         copyNumBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        copyNumBtn.setEnabled(canReveal);
+
         copyNumBtn.addActionListener(e -> {
+            if (!canReveal) {
+                JOptionPane.showMessageDialog(parent, "Only admins can reveal or copy business card details.");
+                return;
+            }
+            
             copyToClipboard(card.getCardNumber());
             JOptionPane.showMessageDialog(parent, "Card number copied to clipboard.");
         });

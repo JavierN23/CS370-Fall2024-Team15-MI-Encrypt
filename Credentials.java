@@ -10,9 +10,6 @@ public class Credentials implements Serializable {
     private static final String FILE_NAME = "users.dat";
     private static final int MAX_LOGIN_ATTEMPTS = 3;
 
-    // Used to give the first business admin acess
-    private static final String OWNER_BOOTSTRAP_CODE = "MIENCRYPT";
-
     // Make sure the accounts map exists
     private void ensureAccountsInitialized() {
         if (accounts == null) {
@@ -71,6 +68,8 @@ public class Credentials implements Serializable {
             return false; // Username already exists
         }
         
+        boolean firstUser = accounts.isEmpty();
+
         UserAccount account = new UserAccount(username, password, email, accountType, securityQuestion, securityAnswer, twoFactorEnabled);
 
         // Make a 2FA secret if 2FA is turned on
@@ -78,7 +77,15 @@ public class Credentials implements Serializable {
             account.setTotpSecret(TOTPUtil.generateSecret());
         }
 
-        // Ensures a business user starts with no business access until approve
+        if (firstUser) {
+            // First user will have business capability
+            if (!accountType.equals("business") && !accountType.equals("both")) {
+                account.setAccountType("both");
+            }
+
+            account.grantBusinessAdminAccess();
+        } else {
+        // Everyone else starts with no business access unless give access
         account.revokeBusinessAccess();
 
         // Business and both accounts can buse an invite code
@@ -88,6 +95,7 @@ public class Credentials implements Serializable {
                 return false; // Invalid invite code
             }
         }
+    }
 
         accounts.put(username, account);
         saveToFile();
@@ -455,37 +463,6 @@ public class Credentials implements Serializable {
             }
         }
         return false;
-    }
-
-    // Lets the first business admin claim admin access
-    public boolean claimInitialBusinessAdmin(String username, String bootstrapCode) {
-        ensureAccountsInitialized();
-        username = username == null ? "" : username.trim();
-        bootstrapCode = bootstrapCode == null ? "" : bootstrapCode.trim();
-
-        UserAccount account = accounts.get(username);
-        if (account == null) {
-            return false;
-        }
-
-        if (!isBusinessType(account)) {
-            return false; // Not a business account
-        }
-
-        // Only works if no admin exists yet
-        if (hasAnyBusinessAdmin()) {
-            return false; // Admin already exists
-        }
-
-        // Code must match
-        if (!OWNER_BOOTSTRAP_CODE.equals(bootstrapCode)) {
-            return false; // Invalid master key
-        }
-
-        account.grantBusinessAdminAccess();
-        saveToFile();
-        return true;
-
     }
 
     // Save credentials to file

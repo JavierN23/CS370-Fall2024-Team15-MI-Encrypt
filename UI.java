@@ -40,9 +40,9 @@ public class UI {
 
         c.setBackground(CARD);
 
-        c.setPreferredSize(new Dimension(760, 620));
         c.setMinimumSize(new Dimension(560, 500));
-        c.setMaximumSize(new Dimension(760, 620));
+        c.setMaximumSize(new Dimension(760, Integer.MAX_VALUE));
+
         return c;
     }
 

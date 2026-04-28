@@ -103,7 +103,6 @@ public class TwoFactorPanel extends JPanel {
         }
 
         if (TOTPUtil.verify(account.getTotpSecret(), code)) {
-            SessionManager.startSession(pendingUsername);
             app.setCurrentUser(pendingUsername);
             JOptionPane.showMessageDialog(this, "Login successful!");
             app.showChoice();

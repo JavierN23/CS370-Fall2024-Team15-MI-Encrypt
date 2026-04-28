@@ -1,4 +1,6 @@
 import java.util.UUID;
+import javax.swing.JOptionPane;
+import javax.swing.Timer;
 
 public class SessionManager {
 
@@ -10,11 +12,15 @@ public class SessionManager {
     //  Adjust depending on how strict you want the timeout to be.
     private static final long TIMEOUT = 90 * 1000; // 90 seconds
 
+    private static Timer sessionTimer;
+
     // Starts a new session
-    public static void startSession(String username) {
+    public static void startSession(String username, AppFrame app) {
         currentUser = username;
         sessionId = UUID.randomUUID().toString();
         lastActivityTime = System.currentTimeMillis();
+
+        startTimer(app);
 
         System.out.println("Session started for " + username);
         System.out.println("Session ID: " + sessionId);
@@ -26,6 +32,11 @@ public class SessionManager {
         currentUser = null;
         sessionId = null;
         lastActivityTime = 0;
+
+        if (sessionTimer != null) {
+            sessionTimer.stop();
+            sessionTimer = null;
+        }
     }
 
     // Updates last activity time
@@ -71,13 +82,27 @@ public class SessionManager {
         // Expired session - Logout
         if (isExpired()) {
             endSession();
-            javax.swing.JOptionPane.showMessageDialog(null, "Session expired due to inactivity. Please log in again.");
+            JOptionPane.showMessageDialog(null, "Session expired due to inactivity. Please log in again.");
             app.showLogin();
             return false;
         }
 
-        // Update activity if still valid
-        updateActivity();
         return true;
+    }
+
+    private static void startTimer(AppFrame app) {
+        if (sessionTimer != null) {
+            sessionTimer.stop();
+        }
+
+        sessionTimer = new Timer(1000, e -> {
+            if (currentUser != null && isExpired()) {
+                endSession();
+                JOptionPane.showMessageDialog(null, "Session expired due to inactivity. Please log in again.");
+                app.showLogin();
+            }
+        });
+
+        sessionTimer.start();
     }
 }

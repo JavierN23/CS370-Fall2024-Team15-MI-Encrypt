@@ -22,6 +22,9 @@ public class AccountPanel extends JPanel {
     private final JPasswordField oldPasswordField = new JPasswordField(20);
     private final JPasswordField newPasswordField = new JPasswordField(20);
 
+    // Password strength label
+    private final JLabel strengthLabel = UI.subtle("Strength: ");
+
     // Stores the default echo characters so password visibility can be restored
     private char oldEchoChar;
     private char newEchoChar;
@@ -107,14 +110,17 @@ public class AccountPanel extends JPanel {
 
         card.add(UI.row("New Password", newPasswordField));
         UI.space(card, 8);
-        // Hide/show password checkbox
-        card.add(showPasswords);
+
+        strengthLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(strengthLabel);
         UI.space(card, 8);
 
         // Check for toggling password visibility
         showPasswords.setOpaque(false);
         showPasswords.setForeground(UI.MUTED);
         showPasswords.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(showPasswords);
+        UI.space(card, 8);
 
         // For show/hide behavior
         char oldDefaultEcho = oldPasswordField.getEchoChar();
@@ -145,16 +151,61 @@ public class AccountPanel extends JPanel {
         buttons.add(backBtn);
 
         card.add(buttons);
-        card.add(Box.createVerticalGlue());
 
         page.add(card);
-        add(page, BorderLayout.CENTER);
+
+        JScrollPane scrollPane = new JScrollPane(page);
+        scrollPane.setBorder(null);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.getViewport().setBackground(UI.BG);
+        
+        add(scrollPane, BorderLayout.CENTER);
 
         // Connecting buttons to their actions
         saveInfoBtn.addActionListener(e -> saveInfo());
         changePasswordBtn.addActionListener(e -> changePassword());
         deleteBtn.addActionListener(e -> deleteAccount());
         backBtn.addActionListener(e -> app.showChoice());
+
+        newPasswordField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                updateStrength();
+            }
+            
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                updateStrength();
+            }
+
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                updateStrength();
+            }
+        });
+    }
+
+    private void updateStrength() {
+        String p = new String(newPasswordField.getPassword());
+
+        if (p.isEmpty()) {
+            strengthLabel.setText("Strength: ");
+            strengthLabel.setForeground(UI.MUTED);
+            return;
+        }
+
+        String label = PasswordStrengthChecker.getStrengthLabel(p);
+        strengthLabel.setText("Strength: " + label);
+
+        switch (label) {
+            case "Weak":
+                strengthLabel.setForeground(Color.RED);
+                break;
+            case "Medium":
+                strengthLabel.setForeground(new Color(200, 140, 0));
+                break;
+            default:
+                strengthLabel.setForeground(new Color(0, 150, 0));
+                break;
+        }
     }
 
     // Loads a user's account information into the fields.
@@ -188,6 +239,12 @@ public class AccountPanel extends JPanel {
         // Clear password fields whenever a user is loaded
         oldPasswordField.setText("");
         newPasswordField.setText("");
+        strengthLabel.setText("Strength: ");
+        strengthLabel.setForeground(UI.MUTED);
+
+        showPasswords.setSelected(false);
+        oldPasswordField.setEchoChar(oldEchoChar);
+        newPasswordField.setEchoChar(newEchoChar);
     }
 
     // Saves updated account information
@@ -273,11 +330,19 @@ public class AccountPanel extends JPanel {
             return;
         }
 
+        if (PasswordStrengthChecker.isWeak(newPassword)) {
+            JOptionPane.showMessageDialog(this, "Password is too weak. Use at least 8 characters with uppercase, lowercase, number, and symbol.");
+            return;
+        }
+
         // Attempts password update through the credential manager
         if (creds.changePassword(loadedUser, oldPassword, newPassword)) {
             // Clear password fields after successful update
             oldPasswordField.setText("");
             newPasswordField.setText("");
+
+            strengthLabel.setText("Strength: ");
+            strengthLabel.setForeground(UI.MUTED);
 
             // Reset password visibility to hidden mode
             showPasswords.setSelected(false);

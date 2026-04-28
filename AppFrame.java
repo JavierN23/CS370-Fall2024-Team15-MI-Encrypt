@@ -88,7 +88,7 @@ public class AppFrame extends JFrame {
     // Saves the current user and starts their session
     public void setCurrentUser(String username) {
         this.currentUser = username;
-        SessionManager.startSession(username);
+        SessionManager.startSession(username, this);
     }
 
     // Returns the current logged-in user
