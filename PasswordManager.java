@@ -213,4 +213,17 @@ public class PasswordManager implements Serializable {
 
         return new PasswordManager();
     }
+
+    public boolean isPasswordReused(UserAccount user, String accountType, String newPassword) {
+        List<PasswordEntry> entries = getVaultEntries(user.getUsername(), accountType);
+
+        for (PasswordEntry entry : entries) {
+            String existing = EncryptionService.decryptCTR(entry.getEncryptedPassword());
+            if (existing.equals(newPassword)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

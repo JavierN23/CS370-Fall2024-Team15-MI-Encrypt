@@ -371,16 +371,15 @@ public class VaultPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Generated password copied.");
         });
 
-        // Business entries need a group
         if ("Business".equalsIgnoreCase(type)) {
             JTextField groupField = new JTextField();
             UI.styleInput(groupField);
 
             Object[] msg = {
-                "Site:", site,
-                "Username:", u,
-                "Password:", passwordPanel,
-                "Business Group:", groupField
+                    "Site:", site,
+                    "Username:", u,
+                    "Password:", passwordPanel,
+                    "Business Group:", groupField
             };
 
             int ok = JOptionPane.showConfirmDialog(this, msg, "Add Entry", JOptionPane.OK_CANCEL_OPTION);
@@ -389,12 +388,43 @@ public class VaultPanel extends JPanel {
             String s = site.getText().trim();
             String un = u.getText().trim();
             String pw = new String(p.getPassword()).trim();
+
             String group = groupField.getText().trim();
 
             if (s.isEmpty() || un.isEmpty() || pw.isEmpty() || group.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "All fields required.");
                 return;
             }
+
+            String strength = PasswordStrengthChecker.getStrengthLabel(pw);
+            boolean isWeak = PasswordStrengthChecker.isWeak(pw);
+            boolean reused = pm.isPasswordReused(account, type, pw);
+
+            if (isWeak || reused) {
+                String message = "";
+
+                if (isWeak) {
+                    message += "⚠ Weak password detected (" + strength + ").\n";
+                }
+
+                if (reused) {
+                    message += "⚠ This password is already used in your vault.\n";
+                }
+
+                message += "\nDo you still want to continue?";
+
+                int choice = JOptionPane.showConfirmDialog(
+                        this,
+                        message,
+                        "Password Warning",
+                        JOptionPane.YES_NO_OPTION
+                );
+
+                if (choice != JOptionPane.YES_OPTION) {
+                    return;
+                }
+            }
+
 
             boolean added = pm.addEntry(account, type, new PasswordEntry(s, un, pw, group));
             if (!added) {
@@ -403,9 +433,9 @@ public class VaultPanel extends JPanel {
             }
         } else {
             Object[] msg = {
-                "Site:", site,
-                "Username:", u,
-                "Password:", passwordPanel
+                    "Site:", site,
+                    "Username:", u,
+                    "Password:", passwordPanel
             };
 
             int ok = JOptionPane.showConfirmDialog(this, msg, "Add Entry", JOptionPane.OK_CANCEL_OPTION);
@@ -418,6 +448,35 @@ public class VaultPanel extends JPanel {
             if (s.isEmpty() || un.isEmpty() || pw.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "All fields required.");
                 return;
+            }
+
+            String strength = PasswordStrengthChecker.getStrengthLabel(pw);
+            boolean isWeak = PasswordStrengthChecker.isWeak(pw);
+            boolean reused = pm.isPasswordReused(account, type, pw);
+
+            if (isWeak || reused) {
+                String message = "";
+
+                if (isWeak) {
+                    message += "⚠ Weak password detected (" + strength + ").\n";
+                }
+
+                if (reused) {
+                    message += "⚠ This password is already used in your vault.\n";
+                }
+
+                message += "\nDo you still want to continue?";
+
+                int choice = JOptionPane.showConfirmDialog(
+                        this,
+                        message,
+                        "Password Warning",
+                        JOptionPane.YES_NO_OPTION
+                );
+
+                if (choice != JOptionPane.YES_OPTION) {
+                    return;
+                }
             }
 
             boolean added = pm.addEntry(account, type, new PasswordEntry(s, un, pw));
@@ -485,7 +544,7 @@ public class VaultPanel extends JPanel {
             panel.add(group);
             panel.add(Box.createVerticalStrut(10));
         }
-        
+
         panel.add(Box.createVerticalStrut(6));
         panel.add(show);
 
