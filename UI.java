@@ -84,7 +84,7 @@ public class UI {
 
     // Row with label + input
     public static JPanel row(String labelText, JComponent field) {
-        return row(labelText, field, 12, 90); // gap and label width
+        return row(labelText, field, 12, 110); // gap and label width
     }
 
     // Row with custom spacing
@@ -107,7 +107,7 @@ public class UI {
         r.add(lbl);
         r.add(field);
 
-        r.setMaximumSize(new Dimension(560, 40));
+        r.setMaximumSize(new Dimension(620, 50));
         return r;
     }
 

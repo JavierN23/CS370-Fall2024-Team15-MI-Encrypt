@@ -1,8 +1,6 @@
-import java.util.UUID;
-import javax.swing.JOptionPane;
-import javax.swing.Timer;
-import javax.swing.*;
 import java.awt.*;
+import java.util.UUID;
+import javax.swing.*;
 
 public class SessionManager {
 
