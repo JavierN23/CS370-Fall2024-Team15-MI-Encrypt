@@ -13,8 +13,6 @@ public class AdminPanel extends JPanel {
     private final AppFrame app;
     // Handles user account data and login/business permission updates
     private final Credentials creds;
-    // Manages creation, storage, activation, and deletion of invite codes
-    private final InviteCodeManager inviteCodeManager;
     // Stores the currently logged-in user
     private UserAccount currentUser;
 
@@ -79,7 +77,6 @@ public class AdminPanel extends JPanel {
         this.app = app;
         this.creds = creds;
         this.currentUser = currentUser;
-        this.inviteCodeManager = InviteCodeManager.loadFromFile();
 
         // Apply consistent styles to inputs, lists, and buttons
         styleComponents();
@@ -133,6 +130,12 @@ public class AdminPanel extends JPanel {
         userList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 loadSelectedUser();
+                updateActionStates();
+            }
+        });
+
+        inviteList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
                 updateActionStates();
             }
         });
@@ -489,12 +492,27 @@ public class AdminPanel extends JPanel {
     private void loadBusinessUsers() {
         userModel.clear();
 
+        if (currentUser == null) {
+            userModel.addElement("No editable business users available");
+            return;
+        }
+
+        String currentAdmin = currentUser.getUsername();
+
         List<UserAccount> accounts = creds.getAllAccounts();
         for (UserAccount account : accounts) {
+            if (account == null) {
+                continue;
+            }
+
             String type = account.getAccountType();
+            String assignedOwner = account.getAssignedVaultOwner();
+
+            boolean businessType = "business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type);
+            boolean linkedToCurrentAdmin = assignedOwner != null && assignedOwner.equalsIgnoreCase(currentAdmin);
 
             // Only show accounts that have business access (business or both)
-            if (("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) && !account.isBusinessAdmin()) {
+            if (businessType && !account.isBusinessAdmin() && linkedToCurrentAdmin) {
                 userModel.addElement(account.getUsername());
             }
         }
@@ -689,7 +707,7 @@ public class AdminPanel extends JPanel {
 
     // Adds Keyboard shortcuts: (Enter = save changes, ESCAPE = go back)    
     private void installKeyboardShortcuts() {
-        InputMap inputMap = getInputMap(WHEN_IN_FOCUSED_WINDOW);
+        InputMap inputMap = getInputMap(WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         ActionMap actionMap = getActionMap();
 
         inputMap.put(KeyStroke.getKeyStroke("ENTER"), "saveChanges");
@@ -740,6 +758,7 @@ public class AdminPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Only business admin can create invite codes.");
             return;
         }
+
         String code = inviteCodeField.getText().trim();
         String role = (String) inviteRoleBox.getSelectedItem();
         int maxUses = (Integer) maxUsesSpinner.getValue();
@@ -767,34 +786,52 @@ public class AdminPanel extends JPanel {
         }
 
         // Create the code
-        boolean success = inviteCodeManager.createCode(code, role, groups, maxUses, currentUser.getUsername());
+        InviteCodeManager manager = InviteCodeManager.loadFromFile();
+        boolean success = manager.createCode(code, role, groups, maxUses, currentUser.getUsername());
 
-        if (success) {
-            JOptionPane.showMessageDialog(this, "Invite code created: " + code);
- 
+        if (success) { 
             // Reset form
             inviteCodeField.setText("");
             inviteRoleBox.setSelectedItem("employee");
             inviteSalesBox.setSelected(false);
             inviteHRBox.setSelected(false);
             maxUsesSpinner.setValue(1);
+
             loadInviteCodes();
+            updateInviteControls();
+            updateActionStates();
+
+            JOptionPane.showMessageDialog(this, "Invite code created: " + code);
         } else {
+
             JOptionPane.showMessageDialog(this, "Failed to create invite code. It may already exist.");
         }
-
-        updateInviteControls();
-        updateActionStates();
     }
 
     // Invite code into the invite list
     private void loadInviteCodes() {
         inviteModel.clear();
 
-        List<InviteCode> codes = inviteCodeManager.getAllCodes();
+        if (currentUser == null) {
+            inviteModel.addElement("No invite codes created yet");
+            inviteList.clearSelection();
+            updateActionStates();
+            return;
+        }
+
+        InviteCodeManager manager = InviteCodeManager.loadFromFile();
+        String currentAdmin = currentUser.getUsername();
+
+        List<InviteCode> codes = manager.getAllCodes();
         for (InviteCode code : codes) {
-            if (code != null) {
+            if (code == null) {
+                continue;
+            }
+
+            String owner = code.getVaultOwnerUsername();
+            if (owner != null && owner.equalsIgnoreCase(currentAdmin)) {
                 inviteModel.addElement(formatInviteCodeDisplay(code));
+
             }
         }
 
@@ -837,22 +874,31 @@ public class AdminPanel extends JPanel {
 
     // Toggles the selected invite code between active and inactive
     private void toggleSelectedInviteActiveState() {
-        String code = getSelectedInviteCodeValue();
-        if (code == null) {
+        String codeValue = getSelectedInviteCodeValue();
+        if (codeValue == null) {
             JOptionPane.showMessageDialog(this, "Select an invite code first.");
+            return;
+        }
+
+        InviteCodeManager manager = InviteCodeManager.loadFromFile();
+        InviteCode code = manager.getCode(codeValue);
+
+        if (code == null) {
+            JOptionPane.showMessageDialog(this, "Invite code could not be found.");
+            loadInviteCodes();
             return;
         }
 
         boolean success;
         if (isSelectedInviteActive()) {
-            success = inviteCodeManager.deactivateCode(code);
+            success = manager.deactivateCode(codeValue);
             if(success) {
                 JOptionPane.showMessageDialog(this, "Invite code deactivated.");
             } else {
                 JOptionPane.showMessageDialog(this, "Unable to deactivate invite code.");
             }
         } else {
-            success = inviteCodeManager.activateCode(code);
+            success = manager.activateCode(codeValue);
             if (success) {
                 JOptionPane.showMessageDialog(this, "Invite code reactivated.");
             } else {
@@ -862,20 +908,21 @@ public class AdminPanel extends JPanel {
 
         if (success) {
             loadInviteCodes();
+            updateActionStates();
         }
     }
     
     // Deletes the selected invite code after confirmation
     private void deleteSelectedInvite() {
-        String code = getSelectedInviteCodeValue();
-        if (code == null) {
+        String codeValue = getSelectedInviteCodeValue();
+        if (codeValue == null) {
             JOptionPane.showMessageDialog(this, "Select an invite code first.");
             return;
         }
 
         int choice = JOptionPane.showConfirmDialog(
                 this,
-                "Delete invite code " + code + "?",
+                "Delete invite code " + codeValue + "?",
                 "Confirm Delete",
                 JOptionPane.YES_NO_OPTION
         );
@@ -884,9 +931,13 @@ public class AdminPanel extends JPanel {
             return;
         }
 
-        if (inviteCodeManager.deleteCode(code)) {
+        InviteCodeManager manager = InviteCodeManager.loadFromFile();
+        boolean success = manager.deleteCode(codeValue);
+
+        if (success) {
             JOptionPane.showMessageDialog(this, "Invite code deleted.");
             loadInviteCodes();
+            updateActionStates();
         } else {
             JOptionPane.showMessageDialog(this, "Unable to delete invite code.");
         }
@@ -894,8 +945,15 @@ public class AdminPanel extends JPanel {
 
     // Returns true if the selected invite code is currently active
     private boolean isSelectedInviteActive() {
-        String selected = inviteList.getSelectedValue();
-        return selected != null && selected.endsWith("| ACTIVE");
+        String codeValue = getSelectedInviteCodeValue();
+        if (codeValue == null) {
+            return false;
+        }
+
+        InviteCodeManager manager = InviteCodeManager.loadFromFile();
+        InviteCode code = manager.getCode(codeValue);
+
+        return code != null && code.isActive();
     }
 
     // Check if a list item is just a placeholder message instead of real data
