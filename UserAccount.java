@@ -26,6 +26,8 @@ public class UserAccount implements Serializable {
     private String businessRole;
     private List<String> allowedBusinessGroups;
 
+    private String assignedVaultOwner;
+
     // Creates new user
     public UserAccount(String username, String password, String email, String accountType, String securityQuestion, String securityAnswer, boolean twoFactorEnabled) {
         this.username = username;
@@ -37,7 +39,6 @@ public class UserAccount implements Serializable {
         this.twoFactorEnabled = twoFactorEnabled;
 
         this.totpSecret = null; // Will be set during 2FA setup if enabled
-        
         this.failedAttempts = 0;
         this.locked = false;
 
@@ -45,6 +46,8 @@ public class UserAccount implements Serializable {
         this.businessAuthorized = false;
         this.businessRole = "none";
         this.allowedBusinessGroups = new ArrayList<>();
+
+        this.assignedVaultOwner = null;
     }
 
     public String getUsername() {
@@ -127,6 +130,18 @@ public class UserAccount implements Serializable {
         return false;
     }
 
+    public String getAssignedVaultOwner() {
+        return assignedVaultOwner;
+    }
+
+    public void setAssignedVaultOwner(String assignedVaultOwner) {
+        if (assignedVaultOwner == null || assignedVaultOwner.trim().isEmpty()) {
+            this.assignedVaultOwner = null;
+        } else {
+            this.assignedVaultOwner = assignedVaultOwner.trim();
+        }
+    }
+
     public void setPassword(String password) {
         this.password = password;
     }
@@ -172,6 +187,7 @@ public class UserAccount implements Serializable {
         if (!businessAuthorized) {
             this.businessRole = "none";
             this.allowedBusinessGroups = new ArrayList<>();
+            this.assignedVaultOwner = null;
         }
     }
 
@@ -243,5 +259,6 @@ public class UserAccount implements Serializable {
         this.businessAuthorized = false;
         this.businessRole = "none";
         this.allowedBusinessGroups = new ArrayList<>();
+        this.assignedVaultOwner = null;
     }
 }

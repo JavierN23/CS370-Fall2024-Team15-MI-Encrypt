@@ -7,7 +7,6 @@ public class Credentials implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private HashMap<String, UserAccount> accounts = new HashMap<>();
-    private static final String FILE_NAME = "users.dat";
     private static final int MAX_LOGIN_ATTEMPTS = 3;
 
     // Make sure the accounts map exists
@@ -30,7 +29,7 @@ public class Credentials implements Serializable {
     }
 
     // Creates a new account
-    public boolean signUp(String username, String password, String email, String accountType, String securityQuestion, String securityAnswer, boolean twoFactorEnabled, String inviteCode, InviteCodeManager inviteCodeManager) {
+    public boolean signUp(String username, String password, String email, String accountType, String businessRole, String securityQuestion, String securityAnswer, boolean twoFactorEnabled, String inviteCode, InviteCodeManager inviteCodeManager) {
 
         ensureAccountsInitialized();
 
@@ -38,9 +37,9 @@ public class Credentials implements Serializable {
         password = password == null ? "" : password.trim();
         email = email == null ? "" : email.trim();
         accountType = accountType == null ? "" : accountType.trim().toLowerCase();
+        businessRole = businessRole == null ? "" : businessRole.trim().toLowerCase();
         securityQuestion = securityQuestion == null ? "" : securityQuestion.trim();
         securityAnswer = securityAnswer == null ? "" : securityAnswer.trim();
-
         inviteCode = inviteCode == null ? "" : inviteCode.trim();
 
 
@@ -77,25 +76,36 @@ public class Credentials implements Serializable {
             account.setTotpSecret(TOTPUtil.generateSecret());
         }
 
+        boolean isBusiness = accountType.equals("business") || accountType.equals("both");
+
         if (firstUser) {
-            // First user will have business capability
-            if (!accountType.equals("business") && !accountType.equals("both")) {
+            // First user becomes admin
+            if (!isBusiness) {
                 account.setAccountType("both");
             }
-
             account.grantBusinessAdminAccess();
         } else {
-        // Everyone else starts with no business access unless give access
-        account.revokeBusinessAccess();
 
-        // Business and both accounts can buse an invite code
-        if ((accountType.equals("business") || accountType.equals("both")) 
-                && !inviteCode.isEmpty()) {
-            if (inviteCodeManager == null || !inviteCodeManager.redeemCode(inviteCode, account)) {
-                return false; // Invalid invite code
+            account.revokeBusinessAccess();
+
+            if (isBusiness) {
+
+                if ("admin".equals(businessRole)) {
+                    account.grantBusinessAdminAccess();
+
+                } else if ("employee".equals(businessRole)) {
+
+                    if (inviteCode.isEmpty() ||
+                        inviteCodeManager == null ||
+                        !inviteCodeManager.redeemCode(inviteCode, account)) {
+                        return false;
+                    }
+
+                } else {
+                    return false; // invalid role
+                }
             }
         }
-    }
 
         accounts.put(username, account);
         saveToFile();

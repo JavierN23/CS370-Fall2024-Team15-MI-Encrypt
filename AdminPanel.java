@@ -195,6 +195,8 @@ public class AdminPanel extends JPanel {
         installKeyboardShortcuts();
 
         // Initialize control states
+        loadBusinessUsers();
+        loadInviteCodes();
         updateUserControls();
         updateInviteControls();
         updateActionStates();
@@ -490,15 +492,16 @@ public class AdminPanel extends JPanel {
         List<UserAccount> accounts = creds.getAllAccounts();
         for (UserAccount account : accounts) {
             String type = account.getAccountType();
+
             // Only show accounts that have business access (business or both)
-            if ("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) {
+            if (("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) && !account.isBusinessAdmin()) {
                 userModel.addElement(account.getUsername());
             }
         }
 
         // Show placeholder text if no user exist
         if (userModel.isEmpty()) {
-            userModel.addElement("No business users available");
+            userModel.addElement("No editable business users available");
         }
     }
 
@@ -524,7 +527,7 @@ public class AdminPanel extends JPanel {
 
         // Default empty or invalid roles to employee
         String role = account.getBusinessRole();
-        if (role == null || role.isBlank() || "none".equalsIgnoreCase(role)) {
+        if (role == null || role.isBlank()) {
             role = "employee";
         }
         roleBox.setSelectedItem(role.toLowerCase());
@@ -552,6 +555,7 @@ public class AdminPanel extends JPanel {
             creds.setBusinessAccess(username, false);
             JOptionPane.showMessageDialog(this, "User " + username + " is no longer authorized for business access.");
             loadSelectedUser();
+            loadBusinessUsers();
             updateActionStates();
             return;
         }
@@ -584,6 +588,7 @@ public class AdminPanel extends JPanel {
 
         JOptionPane.showMessageDialog(this, "User " + username + " updated successfully.");
         loadSelectedUser();
+        loadBusinessUsers();
         updateActionStates();
     }
 
@@ -595,6 +600,7 @@ public class AdminPanel extends JPanel {
         roleBox.setEnabled(authorized);
 
         boolean employeeMode = authorized && "employee".equalsIgnoreCase(role);
+ 
         salesBox.setEnabled(employeeMode);
         hrBox.setEnabled(employeeMode);
 
@@ -730,6 +736,10 @@ public class AdminPanel extends JPanel {
 
     // Creates a new invite code using the data entered in the invite form
     private void createInviteCode() {
+        if (currentUser == null || !currentUser.isBusinessAdmin()) {
+            JOptionPane.showMessageDialog(this, "Only business admin can create invite codes.");
+            return;
+        }
         String code = inviteCodeField.getText().trim();
         String role = (String) inviteRoleBox.getSelectedItem();
         int maxUses = (Integer) maxUsesSpinner.getValue();
@@ -757,7 +767,7 @@ public class AdminPanel extends JPanel {
         }
 
         // Create the code
-        boolean success = inviteCodeManager.createCode(code, role, groups, maxUses);
+        boolean success = inviteCodeManager.createCode(code, role, groups, maxUses, currentUser.getUsername());
 
         if (success) {
             JOptionPane.showMessageDialog(this, "Invite code created: " + code);
@@ -804,6 +814,7 @@ public class AdminPanel extends JPanel {
 
         return code.getCode()
                 + " | " + code.getRole()
+                + " | Owner: " + code.getVaultOwnerUsername()
                 + " | Groups: " + groups
                 + " | Uses: " + code.getUsedCount() + "/" + code.getMaxUses()
                 + " | " + status;
@@ -891,6 +902,7 @@ public class AdminPanel extends JPanel {
     private boolean isPlaceholderValue(String value) {
         return value != null
                 && (value.equals("No business users available")
+                || value.equals("No editable business users available")
                 || value.equals("No invite codes created yet"));
     }
 

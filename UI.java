@@ -126,14 +126,61 @@ public class UI {
 
     // Style for dropdowns
     public static void styleInput(JComboBox<?> box) {
-        box.setBackground(new Color(34, 34, 40));
-        box.setForeground(TEXT);
+        Color bg = new Color(34, 34, 40);
+        Color fg = TEXT;
+        Color disabledBg = new Color(45, 45, 52);
+        Color disabledFg = MUTED;
+
+        box.setBackground(bg);
+        box.setForeground(fg);
         box.setFont(box.getFont().deriveFont(14f));
+        box.setOpaque(true);
+        box.setFocusable(false);
+
         box.setBorder(new CompoundBorder(
             new LineBorder(BORDER, 1, true),
-            new EmptyBorder(6, 10, 6, 10)));
-    }
+            new EmptyBorder(6, 10, 6, 10)
+        ));
 
+        box.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<?> list,
+                    Object value,
+                    int index,
+                    boolean isSelected,
+                    boolean cellHasFocus) {
+
+                JLabel label = (JLabel) super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus
+                );
+
+                label.setOpaque(true);
+                label.setFont(label.getFont().deriveFont(14f));
+                label.setBorder(new EmptyBorder(6, 10, 6, 10));
+
+                if (index == -1) {
+                    if (box.isEnabled()) {
+                        label.setBackground(bg);
+                        label.setForeground(fg);
+                    } else {
+                        label.setBackground(disabledBg);
+                        label.setForeground(disabledFg);
+                    }
+                } else {
+                    if (isSelected) {
+                        label.setBackground(ACCENT);
+                        label.setForeground(TEXT);
+                    } else {
+                        label.setBackground(bg);
+                        label.setForeground(fg);
+                    }
+                }
+
+                return label;
+            }
+        });
+    }
     // Base button style
     public static void styleButton(JButton b, Color bg) {
         b.setFocusPainted(false);
@@ -203,6 +250,18 @@ public class UI {
 
         UIManager.put("SplitPane.background", BG);
         UIManager.put("SplitPaneDivider.background", BORDER);
+
+        
+        UIManager.put("ComboBox.background", new Color(34, 34, 40));
+        UIManager.put("ComboBox.foreground", TEXT);
+        UIManager.put("ComboBox.selectionBackground", ACCENT);
+        UIManager.put("ComboBox.selectionForeground", TEXT);
+        UIManager.put("ComboBox.disabledBackground", new Color(45, 45, 52));
+        UIManager.put("ComboBox.disabledForeground", MUTED);
+        UIManager.put("ComboBox.buttonBackground", new Color(34, 34, 40));
+        UIManager.put("ComboBox.buttonDarkShadow", BORDER);
+        UIManager.put("ComboBox.buttonHighlight", BORDER);
+        UIManager.put("ComboBox.buttonShadow", BORDER);        
     }
 
     // Folder where app data is stored

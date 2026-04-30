@@ -34,8 +34,8 @@ public class AppFrame extends JFrame {
         // Project Title and frame settings
         setTitle("MI Encrypt");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1200, 720);
-        setMinimumSize(new Dimension(1200, 720));
+        setSize(1280, 800);
+        setMinimumSize(new Dimension(1250, 800));
         setLocationRelativeTo(null);
 
         setAppIcon();

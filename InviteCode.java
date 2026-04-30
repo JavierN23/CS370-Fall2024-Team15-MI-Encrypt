@@ -6,6 +6,7 @@ public class InviteCode implements Serializable {
     private static final long serialVersionUID = 1L;
 
     // Basic invite code info
+    private String vaultOwnerUsername;
     private String code;
     private String role;
     private List<String> groups;
@@ -16,9 +17,11 @@ public class InviteCode implements Serializable {
     private int usedCount;
 
     // Creates a new invite code
-    public InviteCode(String code, String role, List<String> groups, int maxUses) {
+    public InviteCode(String code, String role, List<String> groups, int maxUses, String vaultOwnerUsername) {
         // Store code in uppercase
         this.code = code == null ? "" : code.trim().toUpperCase();
+
+        this.vaultOwnerUsername = vaultOwnerUsername == null ? "" : vaultOwnerUsername.trim();
 
         // Only allow "employee" or "admin"
         role = role == null ? "" : role.trim().toLowerCase();
@@ -35,10 +38,18 @@ public class InviteCode implements Serializable {
             }
         }
 
+        if (this.role.equals("admin")) {
+            this.groups = new ArrayList<>();
+        }
+
         // Set default values
         this.active = true;
         this.maxUses = Math.max(1, maxUses);
         this.usedCount = 0;
+    }
+
+    public String getVaultOwnerUsername() {
+        return vaultOwnerUsername;
     }
 
     public String getCode() {
@@ -76,6 +87,7 @@ public class InviteCode implements Serializable {
         if (!canBeUsed()) {
             return;
         }
+        
         usedCount++;
 
         // Disables if max uses reached

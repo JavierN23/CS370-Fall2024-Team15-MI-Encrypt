@@ -4,7 +4,6 @@ import javax.swing.*;
 public class SignUpPanel extends JPanel {
     private final AppFrame app;
     private final Credentials creds;
-    private final InviteCodeManager inviteCodeManager;
 
     // Sign up fields
     private final JTextField user = new JTextField(24);
@@ -15,18 +14,19 @@ public class SignUpPanel extends JPanel {
 
     // Dropdowns for account type and security question
     private final JComboBox<String> accountType = new JComboBox<>(new String[] {"Personal", "Business", "Both"});
+    private final JComboBox<String> businessRole = new JComboBox<>(new String[] {"Employee", "Admin"});
     private final JComboBox<String> securityQuestion = new JComboBox<>(new String[] {"What is your mother's maiden name?", "What was the name of your first pet?", "What was the make of your first car?", "What city were you born in?"});
     
     // Invite code field for business accounts
     private final JTextField inviteCode = new JTextField(24);
-    private final JLabel inviteHelp = UI.subtle("For Business or Both accounts, enter your invite code to receive business access.");
-
+    private final JLabel inviteHelp = UI.subtle("Employee business accounts reqiured a valid invite code.");
+    private final JLabel roleHelp = UI.subtle("Choose Employee or Admin for business access.");
     private final JLabel strengthLabel = UI.subtle("Strength: ");
+
 
     public SignUpPanel(AppFrame app, Credentials creds) {
         this.app = app;
         this.creds = creds;
-        this.inviteCodeManager = InviteCodeManager.loadFromFile();
 
         UI.styleInput(user);
         UI.styleInput(pass);
@@ -35,6 +35,7 @@ public class SignUpPanel extends JPanel {
         UI.styleInput(securityQuestion);
         UI.styleInput(securityAnswer);
         UI.styleInput(inviteCode);
+        UI.styleInput(businessRole);
 
         setLayout(new BorderLayout());
 
@@ -62,10 +63,21 @@ public class SignUpPanel extends JPanel {
         card.add(UI.row("Password", pass));
         UI.space(card, 14);
 
+        strengthLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(strengthLabel);
+        UI.space(card, 6);
+
         card.add(UI.row("Email", email));
         UI.space(card, 14);
 
         card.add(UI.row("Account Type", accountType));
+        UI.space(card, 14);
+
+        card.add(UI.row("Business Role", businessRole, 8, 130));
+        UI.space(card, 14);
+
+        roleHelp.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(roleHelp);
         UI.space(card, 14);
 
         card.add(UI.row("Security Question", securityQuestion));
@@ -113,6 +125,7 @@ public class SignUpPanel extends JPanel {
         reset.addActionListener(e -> clear());
 
         accountType.addActionListener(e -> updateInviteControls());
+        businessRole.addActionListener(e -> updateInviteControls());
         updateInviteControls();
 
         pass.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -137,10 +150,10 @@ public class SignUpPanel extends JPanel {
         email.setText("");
         inviteCode.setText("");
         accountType.setSelectedIndex(0);
+        businessRole.setSelectedIndex(0);
         securityQuestion.setSelectedIndex(0);
         securityAnswer.setText("");
         twoFactor.setSelected(false);
-        updateInviteControls();
 
         strengthLabel.setText("Strength: ");
         strengthLabel.setForeground(UI.MUTED);
@@ -152,7 +165,7 @@ public class SignUpPanel extends JPanel {
         String p = new String(pass.getPassword());
 
         if (p.isEmpty()) {
-            strengthLabel.setText("Strenght: ");
+            strengthLabel.setText("Strength: ");
             strengthLabel.setForeground(UI.MUTED);
             return;
         }
@@ -177,12 +190,22 @@ public class SignUpPanel extends JPanel {
     // Only enables invite code for business/both accounts
     private void updateInviteControls() {
         String type = ((String) accountType.getSelectedItem()).toLowerCase();
-        boolean businessType = "business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type);
+        String role = ((String) businessRole.getSelectedItem()).toLowerCase();
 
-        inviteCode.setEnabled(businessType);
-        inviteHelp.setEnabled(businessType);
+        boolean businessSelected = "business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type);
 
-        if (!businessType) {
+        boolean employeeSelected = "employee".equalsIgnoreCase(role);
+
+        businessRole.setEnabled(businessSelected);
+        roleHelp.setEnabled(businessSelected);
+
+        inviteCode.setEnabled(businessSelected && employeeSelected);
+        inviteHelp.setEnabled(businessSelected && employeeSelected);
+
+        if (!businessSelected) {
+            inviteCode.setText("");
+            businessRole.setSelectedIndex(0);
+        } else if (!employeeSelected) {
             inviteCode.setText("");
         }
     }
@@ -195,6 +218,7 @@ public class SignUpPanel extends JPanel {
         String e = email.getText().trim();
         boolean tfa = twoFactor.isSelected();
         String type = ((String) accountType.getSelectedItem()).toLowerCase();
+        String role = ((String) businessRole.getSelectedItem()).trim().toLowerCase();
         String securityQ = ((String) securityQuestion.getSelectedItem()).trim();
         String securityA = securityAnswer.getText().trim();
         String code = inviteCode.getText().trim();
@@ -209,18 +233,28 @@ public class SignUpPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Password is too weak. Use at least 8 characters with uppercase, lowercase, number, and symbol.");
             return;
         }
+
+        boolean businessSelected =
+            "business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type);
+
+        if (businessSelected && "employee".equalsIgnoreCase(role) && code.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Employee busines accounts require a valid invite code.");
+            return;
+        }
+
+        InviteCodeManager refreshInviteCodeManager = InviteCodeManager.loadFromFile();
+
         boolean created;
-        
         // Try creating the account
-        if (("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) && !code.isEmpty()) {
-            created = creds.signUp(u, p, e, type, securityQ, securityA, tfa, code, inviteCodeManager);
+        if (businessSelected && "employee".equalsIgnoreCase(role)) {
+            created = creds.signUp(u, p, e, type, role, securityQ, securityA, tfa, code, refreshInviteCodeManager);
         } else {
-            created = creds.signUp(u, p, e, type, securityQ, securityA, tfa, "", inviteCodeManager);
+            created = creds.signUp(u, p, e, type, role, securityQ, securityA, tfa, "", refreshInviteCodeManager);
         }
 
         // Show error if sign up failed
         if (!created) {
-            if (("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) && !code.isEmpty()) {
+            if (businessSelected && "employee".equalsIgnoreCase(role)) {
                 JOptionPane.showMessageDialog(this, "Failed to create account. The invite code may be invalid or already used.");
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to create account. The username may already be taken.");
@@ -246,8 +280,6 @@ public class SignUpPanel extends JPanel {
 
             if (account.isBusinessAuthorized()) {
                 JOptionPane.showMessageDialog(this, "Account created with Business access. Set up your authenticator app to finish enabling 2FA.");
-            } else if ("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) {
-                JOptionPane.showMessageDialog(this, "Account created with Business access. Set up your authenticator app to finish enabling 2FA.");
             } else {
                 JOptionPane.showMessageDialog(this, "Account created successfully! Set up your authenticator app to finish enabling 2FA.");
             }
@@ -257,8 +289,6 @@ public class SignUpPanel extends JPanel {
             // If no 2FA, finish sign up normally
             if (account.isBusinessAuthorized()) {
                 JOptionPane.showMessageDialog(this, "Account created successfully and business access was assigned.");
-            } else if ("business".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type)) {
-                JOptionPane.showMessageDialog(this, "Account created successfully. Business access will remain unavailable until an admin grants access or you use a valid invite code.");
             } else {
                 JOptionPane.showMessageDialog(this, "Account created successfully! You can now log in.");
             }
