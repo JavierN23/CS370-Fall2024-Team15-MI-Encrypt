@@ -890,7 +890,7 @@ public class AdminPanel extends JPanel {
         }
 
         boolean success;
-        if (isSelectedInviteActive()) {
+        if (code.isActive()) {
             success = manager.deactivateCode(codeValue);
             if(success) {
                 JOptionPane.showMessageDialog(this, "Invite code deactivated.");
@@ -902,7 +902,7 @@ public class AdminPanel extends JPanel {
             if (success) {
                 JOptionPane.showMessageDialog(this, "Invite code reactivated.");
             } else {
-                JOptionPane.showMessageDialog(this, "Unabled to reactivate invite code.");
+                JOptionPane.showMessageDialog(this, "Unable to reactivate invite code.");
             }
         }
 
@@ -941,19 +941,6 @@ public class AdminPanel extends JPanel {
         } else {
             JOptionPane.showMessageDialog(this, "Unable to delete invite code.");
         }
-    }
-
-    // Returns true if the selected invite code is currently active
-    private boolean isSelectedInviteActive() {
-        String codeValue = getSelectedInviteCodeValue();
-        if (codeValue == null) {
-            return false;
-        }
-
-        InviteCodeManager manager = InviteCodeManager.loadFromFile();
-        InviteCode code = manager.getCode(codeValue);
-
-        return code != null && code.isActive();
     }
 
     // Check if a list item is just a placeholder message instead of real data
