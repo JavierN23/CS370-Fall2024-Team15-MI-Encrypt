@@ -19,8 +19,8 @@ public class SignUpPanel extends JPanel {
     
     // Invite code field for business accounts
     private final JTextField inviteCode = new JTextField(24);
-    private final JLabel inviteHelp = UI.subtle("Employee business accounts reqiured a valid invite code.");
-    private final JLabel roleHelp = UI.subtle("Choose Employee or Admin for business access.");
+    private final JLabel inviteHelp = UI.subtle("Employee business accounts require a valid invite code");
+    private final JLabel roleHelp = UI.subtle("Choose Employee or Admin for business access");
     private final JLabel strengthLabel = UI.subtle("Strength: ");
 
 
@@ -50,7 +50,7 @@ public class SignUpPanel extends JPanel {
 
         UI.space(card, 8);
 
-        JLabel subtitle = UI.subtle("Fill in the details below to create an account.");
+        JLabel subtitle = UI.subtle("Fill in the details below to create an account");
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         card.add(subtitle);
 
