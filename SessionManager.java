@@ -9,7 +9,7 @@ public class SessionManager {
     private static String sessionId;
     private static long lastActivityTime;
 
-    private static final long TIMEOUT = 10 * 1000; // 90 seconds
+    private static final long TIMEOUT = 90 * 1000; // 90 seconds
 
     private static Timer sessionTimer;
 
