@@ -71,7 +71,18 @@ public class PasswordManager implements Serializable {
         }
 
         // Employees can only view entries from their group
-        return user.hasBusinessGroup(entry.getBusinessGroup());
+        String groupText = entry.getBusinessGroup();
+        if (groupText == null || groupText.trim().isEmpty())
+            return false;
+
+        String[] groups = groupText.split("\\s*(,|/|&|\\band\\b)\\s*");
+
+        for (String group : groups) {
+            if (user.hasBusinessGroup(group.trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Returns the entries the user is allowed to see
@@ -101,7 +112,7 @@ public class PasswordManager implements Serializable {
         // Employee sees only entries matching their groups
         List<PasswordEntry> filtered = new ArrayList<>();
         for (PasswordEntry entry : entries) {
-            if (entry != null && user.hasBusinessGroup(entry.getBusinessGroup())) {
+            if (entry != null && canViewBusinessEntry(user, entry)) {
                 filtered.add(entry);
             }
         }

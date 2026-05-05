@@ -13,27 +13,23 @@ public class CreditCardEntry implements Serializable {
     private String encryptedCVV;
     private String cardType;
     private String dateAdded;
+    private String businessGroup;
 
     public CreditCardEntry(String nickname, String cardholderName, String cardNumber,
                            String expiryDate, String cvv, String cardType) {
-        this.nickname = nickname;
-        this.cardholderName = cardholderName;
-        this.encryptedCardNumber = EncryptionService.encryptCTR(cardNumber);
-        this.expiryDate = expiryDate;
-        this.encryptedCVV = EncryptionService.encryptCTR(cvv);
-        this.cardType = cardType;
-        this.dateAdded = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy"));
+        this(nickname, cardholderName, cardNumber, expiryDate, cvv, cardType, null);
     }
 
     public CreditCardEntry(String nickname, String cardholderName, String cardNumber,
-                           String expiryDate, String cvv, String cardType, String dateAdded) {
+                           String expiryDate, String cvv, String cardType, String businessGroup) {
         this.nickname = nickname;
         this.cardholderName = cardholderName;
         this.encryptedCardNumber = EncryptionService.encryptCTR(cardNumber);
         this.expiryDate = expiryDate;
         this.encryptedCVV = EncryptionService.encryptCTR(cvv);
         this.cardType = cardType;
-        this.dateAdded = dateAdded;
+        this.businessGroup = businessGroup;
+        this.dateAdded = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy"));
     }
 
     // Getters
@@ -43,6 +39,7 @@ public class CreditCardEntry implements Serializable {
     public String getExpiryDate()        { return expiryDate; }
     public String getCardType()          { return cardType; }
     public String getDateAdded()         { return dateAdded; }
+    public String getBusinessGroup()     { return businessGroup;}
 
     public String getCardNumber() {
         return EncryptionService.decryptCTR(encryptedCardNumber);
@@ -66,6 +63,7 @@ public class CreditCardEntry implements Serializable {
     public void setCardholderName(String cardholderName) { this.cardholderName = cardholderName; }
     public void setExpiryDate(String expiryDate)         { this.expiryDate = expiryDate; }
     public void setCardType(String cardType)             { this.cardType = cardType; }
+    public void setBusinessGroup(String businessGroup)   { this.businessGroup = businessGroup; }
 
     public void setCardNumber(String plain) {
         this.encryptedCardNumber = EncryptionService.encryptCTR(plain);
@@ -83,15 +81,16 @@ public class CreditCardEntry implements Serializable {
         Objects.equals(cardholderName, that.cardholderName) &&
         Objects.equals(encryptedCardNumber, that.encryptedCardNumber) &&
         Objects.equals(expiryDate, that.expiryDate) &&
-        Objects.equals(encryptedCVV, that .encryptedCVV) &&
+        Objects.equals(encryptedCVV, that.encryptedCVV) &&
         Objects.equals(cardType, that.cardType) &&
-        Objects.equals(dateAdded, that.dateAdded);
+        Objects.equals(dateAdded, that.dateAdded) &&
+        Objects.equals(businessGroup, that.businessGroup);
         
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(nickname, cardholderName, encryptedCardNumber, expiryDate, encryptedCVV, cardType, dateAdded);
+        return Objects.hash(nickname, cardholderName, encryptedCardNumber, expiryDate, encryptedCVV, cardType, dateAdded, businessGroup);
     }
 
     @Override

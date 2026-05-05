@@ -791,11 +791,43 @@ public class VaultPanel extends JPanel {
         dialog.setVisible(true);
     }
 
+    private String getCreditCardOwner() {
+        UserAccount account = creds.getAccount(user);
+
+        if (!"Business".equalsIgnoreCase(type) || account == null) {
+            return user;
+        }
+
+        if (account.isBusinessAdmin()) {
+            return account.getUsername();
+        }
+
+        String owner = account.getAssignedVaultOwner();
+        return owner == null || owner.trim().isEmpty() ? user : owner.trim();
+    }
+    private boolean canViewBusinessCard(UserAccount account, CreditCardEntry card) {
+        if (account == null || card == null) return false;
+
+        if (account.isBusinessAdmin()) return true;
+
+        String groupText = card.getBusinessGroup();
+        if (groupText == null || groupText.trim().isEmpty()) return false;
+
+        String[] groups = groupText.split("\\s*(,|/|&|\\band\\b)\\s*");
+
+        for (String group : groups) {
+            if (account.hasBusinessGroup(group.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
     // Credit Card Manager
     private void showCreditCardsDialog() {
         boolean isBusinessVault = "Business".equalsIgnoreCase(type);
         boolean canView = !isBusinessVault || canViewBusinessVault();
         boolean canModify = !isBusinessVault || canModifyBusinessVault();
+        String cardOwner = getCreditCardOwner();
 
         if (!canView) {
             JOptionPane.showMessageDialog(this, "You don't have permission to view business credit cards.");
@@ -805,8 +837,12 @@ public class VaultPanel extends JPanel {
         DefaultListModel<CreditCardEntry> cardModel = new DefaultListModel<>();
         JList<CreditCardEntry> cardList = new JList<>(cardModel);
 
-        for (CreditCardEntry c : ccm.getCards(user)) {
-            cardModel.addElement(c);
+        UserAccount account = creds.getAccount(user);
+
+        for (CreditCardEntry c : ccm.getCards(cardOwner)) {
+            if (!"Business".equalsIgnoreCase(type) || (account != null && account.isBusinessAdmin()) || canViewBusinessCard(account, c)) {
+                cardModel.addElement(c);
+            }
         }
 
         cardList.setBackground(UI.CARD);
@@ -869,7 +905,7 @@ public class VaultPanel extends JPanel {
         header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
         header.setForeground(UI.TEXT);
 
-        JLabel sub = UI.subtle(ccm.getCards(user).size() + " card(s) stored");
+        JLabel sub = UI.subtle(cardModel.getSize() + " card(s) visible");
 
         JPanel headerPanel = new JPanel();
         headerPanel.setOpaque(false);
@@ -915,7 +951,7 @@ public class VaultPanel extends JPanel {
 
         delCardBtn.addActionListener(e -> {
             if (!canModify) {
-                JOptionPane.showMessageDialog(dialog, "Select a card first");
+                JOptionPane.showMessageDialog(dialog, "Only admins can delete business credit cards.");
                 return;
             }
 
@@ -924,9 +960,9 @@ public class VaultPanel extends JPanel {
             int ok = JOptionPane.showConfirmDialog(dialog,
                     "Delete \"" + sel.getNickname() + "\"?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
             if (ok == JOptionPane.YES_OPTION) {
-                ccm.removeCard(user, sel);
+                ccm.removeCard(cardOwner, sel);
                 cardModel.removeElement(sel);
-                sub.setText(cardModel.getSize() + " card(s) stored");
+                sub.setText(cardModel.getSize() + " card(s) visible");
             }
         });
 
@@ -947,7 +983,10 @@ public class VaultPanel extends JPanel {
         JTextField holderName = new JTextField();
         JTextField cardNumber = new JTextField();
         JTextField expiryDate = new JTextField();
+        JTextField groupField = new JTextField();
         JPasswordField cvv = new JPasswordField();
+
+
         String[] types = {"Visa", "Mastercard", "American Express", "Discover", "Other"};
         JComboBox<String> cardType = new JComboBox<>(types);
 
@@ -957,11 +996,25 @@ public class VaultPanel extends JPanel {
         UI.styleInput(expiryDate);
         UI.styleInput(cvv);
         UI.styleInput(cardType);
+        UI.styleInput(groupField);
 
         expiryDate.setToolTipText("Format: MM/YY (e.g. 09/27)");
         cvv.setToolTipText("3 or 4 digit security code");
 
-        Object[] fields = {
+        Object[] fields;
+
+        if ("Business".equalsIgnoreCase(this.type)) {
+            fields = new Object[] {
+            "Nickname (e.g. Chase Debit):", nickname,
+            "Cardholder Name:", holderName,
+            "Card Number:", cardNumber,
+            "Expiry Date (MM/YY):", expiryDate,
+            "CVV:", cvv,
+            "Card Type:", cardType,
+            "Business Group:", groupField
+        };
+    } else {
+        fields = new Object[] {
             "Nickname (e.g. Chase Debit):", nickname,
             "Cardholder Name:", holderName,
             "Card Number:", cardNumber,
@@ -969,6 +1022,7 @@ public class VaultPanel extends JPanel {
             "CVV:", cvv,
             "Card Type:", cardType
         };
+    }
 
         int ok = JOptionPane.showConfirmDialog(parent, fields,
                 "Add Credit Card", JOptionPane.OK_CANCEL_OPTION);
@@ -979,11 +1033,17 @@ public class VaultPanel extends JPanel {
         String num = cardNumber.getText().trim().replaceAll("[\\s-]", "");
         String exp = expiryDate.getText().trim();
         String cvvStr = new String(cvv.getPassword()).trim();
-        String type = (String) cardType.getSelectedItem();
+        String cardTypeValue = (String) cardType.getSelectedItem();
+        String group = groupField.getText().trim();
 
         if (nick.isEmpty() || holder.isEmpty() || num.isEmpty()
                 || exp.isEmpty() || cvvStr.isEmpty()) {
             JOptionPane.showMessageDialog(parent, "All fields are required.");
+            return;
+        }
+
+        if ("Business".equalsIgnoreCase(this.type) && group.isEmpty()) {
+            JOptionPane.showMessageDialog(parent, "Business group is required.");
             return;
         }
         if (!num.matches("\\d{13,19}")) {
@@ -999,10 +1059,16 @@ public class VaultPanel extends JPanel {
             return;
         }
 
-        CreditCardEntry entry = new CreditCardEntry(nick, holder, num, exp, cvvStr, type);
-        ccm.addCard(user, entry);
+        CreditCardEntry entry;
+
+        if ("Business".equalsIgnoreCase(this.type)) {
+            entry = new CreditCardEntry(nick, holder, num, exp, cvvStr, cardTypeValue, group);
+        } else {
+            entry = new CreditCardEntry(nick, holder, num, exp, cvvStr, cardTypeValue);
+        }
+        ccm.addCard(getCreditCardOwner(), entry);
         model.addElement(entry);
-        countLabel.setText(model.getSize() + " card(s) stored");
+        countLabel.setText(model.getSize() + " card(s) visible");
     }
 
     // Dialog to view all details of a saved card (with reveal toggle)
