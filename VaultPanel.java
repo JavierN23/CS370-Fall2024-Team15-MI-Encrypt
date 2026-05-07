@@ -297,7 +297,7 @@ public class VaultPanel extends JPanel {
         add.setEnabled(canModify);
         edit.setEnabled(canModify);
         del.setEnabled(canModify);
-        generateBtn.setEnabled(canModify);
+        generateBtn.setEnabled(canView);
     }
 
     // Checks if user can see business vault entries
@@ -890,7 +890,7 @@ public class VaultPanel extends JPanel {
         JButton closeBtn     = UI.secondaryButton("Close");
 
         addCardBtn.setEnabled(canModify);
-        copyNumBtn.setEnabled(canModify);
+        copyNumBtn.setEnabled(canView);
         delCardBtn.setEnabled(canModify);        
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
@@ -938,11 +938,6 @@ public class VaultPanel extends JPanel {
         });
 
         copyNumBtn.addActionListener(e -> {
-            if (!canModify) {
-                JOptionPane.showMessageDialog(dialog, "Only admins can copy business card numbers.");
-                return;
-            }
-
             CreditCardEntry sel = cardList.getSelectedValue();
             if (sel == null) { JOptionPane.showMessageDialog(dialog, "Select a card first."); return; }
             copyToClipboard(sel.getCardNumber());
@@ -1097,7 +1092,8 @@ public class VaultPanel extends JPanel {
         JLabel dateL = new JLabel("Added:  " + card.getDateAdded());
         dateL.setForeground(UI.MUTED);
 
-        boolean canReveal = !"Business".equalsIgnoreCase(type) || canModifyBusinessVault();
+        boolean canReveal = !"Business".equalsIgnoreCase(type) || canViewBusinessVault();
+        boolean canCopy   = !"Business".equalsIgnoreCase(type) || canViewBusinessVault();
 
         JCheckBox revealBox = new JCheckBox("Reveal card number and CVV");
         revealBox.setOpaque(false);
@@ -1105,11 +1101,6 @@ public class VaultPanel extends JPanel {
         revealBox.setEnabled(canReveal);
 
         revealBox.addActionListener(e -> {
-            if (!canReveal) {
-                revealBox.setSelected(false);
-                return;
-            }
-
             if (revealBox.isSelected()) {
                 numL.setText("Card Number:  " + card.getCardNumber());
                 cvvL.setText("CVV:  " + card.getCVV());
@@ -1121,14 +1112,9 @@ public class VaultPanel extends JPanel {
 
         JButton copyNumBtn = UI.secondaryButton("Copy Number");
         copyNumBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        copyNumBtn.setEnabled(canReveal);
+        copyNumBtn.setEnabled(canCopy);
 
         copyNumBtn.addActionListener(e -> {
-            if (!canReveal) {
-                JOptionPane.showMessageDialog(parent, "Only admins can reveal or copy business card details.");
-                return;
-            }
-            
             copyToClipboard(card.getCardNumber());
             JOptionPane.showMessageDialog(parent, "Card number copied to clipboard.");
         });

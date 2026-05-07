@@ -40,7 +40,7 @@ public class TwoFactorPanel extends JPanel {
         UI.space(card, 28);
 
         // Code field
-        card.add(UI.row("Authenticator Code", codeField));
+        card.add(UI.row("Authenticator Code", codeField, 12, 160));
 
         UI.space(card, 8);
 
